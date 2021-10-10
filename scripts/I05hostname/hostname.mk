@@ -5,7 +5,7 @@ include ../common.mk
 
 OK : /etc/hostname
 
-hostname:=$(call hostvar,hostname)
+hostname:=$(call hvar,hostname)
 ifeq ($(hostname),)
 hostname:=unknown_hostname
 endif
