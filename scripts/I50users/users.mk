@@ -23,4 +23,4 @@ OK : $(targets)
 
 make_users :
 	bin/make_users_groups.py $(ldap_domain_password) $(ldap_domain_dn) --users $(users_csv) --groups $(groups_csv)
-
+	service sssd restart
