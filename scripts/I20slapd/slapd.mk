@@ -14,6 +14,6 @@ endif
 
 OK : $(targets)
 
-/usr/sbin/slappasswd :
+/usr/bin/slappasswd :
 	$(aptinst) slapd
 	which slappasswd
