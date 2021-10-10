@@ -163,6 +163,7 @@ $(all_nodes_configured) : %.configured : %.ssh $(cloud_sqlite) $(cloud_csv)
 	cd ../../lscripts && make --warn-undefined-variables
 	# ----- configure $* : copy host database ----- 
 #	$(scp) -r ../../data root@$$(cat addrs/$*):$(env_dir)/
+	chmod -R g-r,g-w,o-r,o-w ../../data
 	$(rsync) ../../data root@$$(cat addrs/$*):$(env_dir)/
 	# ----- configure $* : do configure ----- 
 	$(ssh) root@$$(cat addrs/$*) "cd $(env_dir)/scripts && make --warn-undefined-variables"
