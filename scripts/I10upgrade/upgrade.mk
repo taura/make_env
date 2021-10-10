@@ -5,5 +5,5 @@
 include ../common.mk
 
 OK :
-	$(apt) update
+	- $(apt) update
 	$(apt) upgrade
