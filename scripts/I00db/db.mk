@@ -3,14 +3,11 @@
 # 
 include ../common.mk
 
-OK : $(hdb) $(udb)
+OK : $(db)
 
-$(hdb) : $(data_dir)/hosts.csv
-	echo -n | sqlite3 -separator , -cmd ".import $(data_dir)/hosts.csv hosts" $(hdb).tmp
-	chmod 0600 $(hdb).tmp
-	mv $(hdb).tmp $(hdb)
+$(db) : $(data_dir)/hosts.csv
+	echo -n | sqlite3 -separator , -cmd ".import $(data_dir)/hosts.csv hosts" $(db).tmp
+	echo -n | sqlite3 -separator , -cmd ".import $(data_dir)/users.csv users" $(db).tmp
+	chmod 0600 $(db).tmp
+	mv $(db).tmp $(db)
 
-$(udb) : $(data_dir)/users.csv
-	echo -n | sqlite3 -separator , -cmd ".import $(data_dir)/users.csv users" $(udb).tmp
-	chmod 0600 $(udb).tmp
-	mv $(udb).tmp $(udb)

@@ -18,6 +18,7 @@ data_dir:=$(realpath $(this_dir)/../data)
 ensure_line:=$(bin_dir)/ensure_line
 kv_merge:=$(bin_dir)/kv_merge
 
+db:=$(data_dir)/conf.sqlite
 nodename?=$(shell $(data_dir)/get_nodename)
 
 .DELETE_ON_ERROR:

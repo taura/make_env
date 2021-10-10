@@ -47,17 +47,16 @@ env_dir := $(shell basename $(env_git) .git)
 git_host := $(shell echo $(env_git) | sed -e 's!ssh://!!' -e s/git@// -e 's:/.*::')
 
 # ---------- no need to edit below ----------
-reconf ?= 0
 
 key_pem:=$(key_name).pem
 ssh:=ssh -A -i $(key_pem)
 scp:=scp -i $(key_pem)
-aws_sqlite:=aws.sqlite
+aws_sqlite:=../../data/aws.sqlite
 
 apt:=DEBIAN_FRONTEND=noninteractive apt -q -y -o DPkg::Options::=--force-confold
 aptinst:=$(apt) install
 
-master_node:=master
+master_node?=$(master_node_name)
 # index of compute nodes 000 001 002 ... n_compute_node-1
 compute_nodes_idx:=$(shell seq -f %03.0f 0 $$(($(n_compute_nodes) - 1)))
 # compute node names node000 node001 node002 ... 
@@ -111,16 +110,12 @@ $(master_node_running) : %.running : addrs
 # arbitrary, but they must match device names in
 # $(env_dir)/scripts/I40fstab/fstab.mk
 	# ===== ensure $* is running and attach volumes =====
-	./ensure_instance --key-name $(key_name) --instance-type $(master_node_instance_type) \
-	 --availability-zone $(availability_zone) --image-id $(master_node_image_id) \
-	 --use_spot $(master_node_use_spot) $(ensure_instance_common_opts) $(ensure_instance_master_node_opts) $* > addrs/$*
+	./ensure_instance --key-name $(key_name) --instance-type $(master_node_instance_type) --availability-zone $(availability_zone) --image-id $(master_node_image_id) --use_spot $(master_node_use_spot) $(ensure_instance_common_opts) $(ensure_instance_master_node_opts) $* > addrs/$*
 
 # get a compute node running in ec2
 $(compute_nodes_running) : %.running : addrs
 	# ===== ensure $* is running =====
-	./ensure_instance --key-name $(key_name) --instance-type $(compute_node_instance_type) \
-	 --availability-zone $(availability_zone) --image-id $(compute_node_image_id) \
-	 --use_spot $(compute_node_use_spot) $(ensure_instance_common_opts) $(ensure_instance_compute_node_opts) $* > addrs/$*
+	./ensure_instance --key-name $(key_name) --instance-type $(compute_node_instance_type) --availability-zone $(availability_zone) --image-id $(compute_node_image_id) --use_spot $(compute_node_use_spot) $(ensure_instance_common_opts) $(ensure_instance_compute_node_opts) $* > addrs/$*
 
 # after the master and compute nodes start running,
 # make a database of IP addresses
@@ -147,7 +142,7 @@ $(compute_nodes_configured) : $(master_node_configured)
 $(all_nodes_configured) : %.configured : %.ssh $(aws_sqlite)
 	# ===== configure $* ===== 
 #	$(ssh) root@$$(cat addrs/$*) "dpkg --configure -a --force-confdef"
-	$(ssh) root@$$(cat addrs/$*) "$(apt) update"
+	- $(ssh) root@$$(cat addrs/$*) "$(apt) update"
 #	$(ssh) root@$$(cat addrs/$*) "$(apt) upgrade"
 	# ----- configure $* : install make and sqlite3 -----
 	$(ssh) root@$$(cat addrs/$*) "$(aptinst) make sqlite3"
@@ -159,74 +154,7 @@ $(all_nodes_configured) : %.configured : %.ssh $(aws_sqlite)
 		$(ssh) root@$$(cat addrs/$*) "echo -e \"Host $(git_host)\n\tStrictHostKeyChecking no\n\" >> ~/.ssh/config"; \
 	done
 	# ----- configure $* : copy host database ----- 
-	$(scp) $(aws_sqlite) root@$$(cat addrs/$*):$(env_dir)/scripts/
+	$(scp) -r ../../data root@$$(cat addrs/$*):$(env_dir)/
 	# ----- configure $* : do configure ----- 
-	$(ssh) root@$$(cat addrs/$*) "cd $(env_dir)/scripts && make --warn-undefined-variables reconf=$(reconf)"
-
-$(compute_nodes_env_dir) : $(aws_sqlite) $(compute_nodes_ssh)
-	# ===== configure nodeXXX ===== 
-	# ----- configure nodeXXX : install make and sqlite3 -----
-	$(ssh) root@$$(cat addrs/$(subst .env_dir,,$@)) "$(aptinst) make sqlite3"
-	# ----- configure nodeXXX : clone configuration scripts -----
-	for i in $$(seq 1 10); do \
-		if $(ssh) -A root@$$(cat addrs/$(subst .env_dir,,$@)) "export GIT_SSH_COMMAND=\"ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no\"; if [ -e $(env_dir) ]; then cd $(env_dir) ; git pull ; else git clone $(env_git) ; fi" ; then \
-			break ; \
-		fi; \
-		$(ssh) root@$$(cat addrs/$(subst .env_dir,,$@)) "echo -e \"Host gitlab.eidos.ic.i.u-tokyo.ac.jp\n\tStrictHostKeyChecking no\n\" >> ~/.ssh/config"; \
-	done
-	# ----- configure nodeXXX : copy host database ----- 
-	$(scp) $(aws_sqlite) root@$$(cat addrs/$(subst .env_dir,,$@)):$(env_dir)/scripts/
-
-all_compute_nodes_env_dir : $(compute_nodes_env_dir)
-
-$(compute_nodes_make) : master_node_resettings $(compute_nodes_resettings)
-	# ----- configure nodeXXX : do configure ----- 
-	$(ssh) root@$$(cat addrs/$(subst .make,,$@)) "cd $(env_dir)/scripts && make --warn-undefined-variables"
-
-all_compute_nodes_make : $(compute_nodes_make)
-
-master_node_resettings : all_compute_nodes_env_dir
-	# ----- configure madb.zapto.org : copy host database ----- 
-	$(scp) $(aws_sqlite) root@$$(cat addrs/madb.zapto.org):$(env_dir)/scripts/
-	# ----- configure madb.zapto.org : do configure ----- 
-	$(ssh) root@$$(cat addrs/madb.zapto.org) "cd /root/$(env_dir)/scripts && LC_ALL=C make --warn-undefined-variables -C I07hosts -f hosts.mk"
-	$(ssh) root@$$(cat addrs/madb.zapto.org) "cd /root/$(env_dir)/scripts && LC_ALL=C make --warn-undefined-variables -C I45export -f export.mk"
-
-master_node_resettings2 : 
-	# ----- configure madb.zapto.org : copy host database -----
-	$(scp) $(aws_sqlite) root@$$(cat addrs/madb.zapto.org):$(env_dir)/scripts/
-	# ----- configure madb.zapto.org : do configure -----
-	$(ssh) root@$$(cat addrs/madb.zapto.org) "cd /root/$(env_dir)/scripts && LC_ALL=C make --warn-undefined-variables -C I07hosts -f hosts.mk"
-	$(ssh) root@$$(cat addrs/madb.zapto.org) "cd /root/$(env_dir)/scripts && LC_ALL=C make --warn-undefined-variables -C I45export -f export.mk"
-
-$(compute_nodes_resettings) : all_compute_nodes_env_dir
-	# ----- configure nodeXXX : copy host database ----- 
-	$(scp) $(aws_sqlite) root@$$(cat addrs/$(subst .resettings,,$@)):$(env_dir)/scripts/
-	# ----- configure nodeXXX : do configure ----- 
-	$(ssh) root@$$(cat addrs/$(subst .resettings,,$@)) "cd /root/$(env_dir)/scripts && LC_ALL=C make --warn-undefined-variables -C I07hosts -f hosts.mk"
-
-$(compute_nodes_make2) :
-	# ----- configure nodeXXX : do configure -----
-	$(ssh) root@$$(cat addrs/$(subst .make2,,$@)) 'screen -d -m bash -c "cd $(env_dir)/scripts && make --warn-undefined-variables"' &
-
-all_compute_nodes_make2 : $(compute_nodes_make2)
-
-
-master_node_env_dir : $(aws_sqlite) $(master_node_ssh)
-	# ===== configure madb.zapto.org ===== 
-	# ----- configure madb.zapto.org : install make and sqlite3 -----
-	$(ssh) root@$$(cat addrs/madb.zapto.org) "$(aptinst) make sqlite3"
-	# ----- configure madb.zapto.org : clone configuration scripts -----
-	for i in $$(seq 1 10); do \
-		if $(ssh) -A root@$$(cat addrs/madb.zapto.org) "if [ -e $(env_dir) ]; then cd $(env_dir) ; git pull ; else git clone $(env_git) ; fi" ; then \
-			break; \
-		fi; \
-		$(ssh) root@$$(cat addrs/madb.zapto.org) "echo -e \"Host gitlab.eidos.ic.i.u-tokyo.ac.jp\n\tStrictHostKeyChecking no\n\" >> ~/.ssh/config"; \
-	done
-	# ----- configure madb.zapto.org : copy host database ----- 
-	$(scp) $(aws_sqlite) root@$$(cat addrs/madb.zapto.org):$(env_dir)/scripts/
-
-master_node_make : master_node_env_dir
-	# ----- configure madb.zapto.org : do configure ----- 
-	$(ssh) root@$$(cat addrs/madb.zapto.org) "cd $(env_dir)/scripts && make --warn-undefined-variables"
+	$(ssh) root@$$(cat addrs/$*) "cd $(env_dir)/scripts && make --warn-undefined-variables"
 
