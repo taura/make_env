@@ -1,0 +1,4 @@
+key,val
+ldap_domain,ldap.zapto.org
+ldap_root_password,sieGieh0
+ldap_domain_password,sieGieh0
