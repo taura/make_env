@@ -8,4 +8,4 @@ bin_dir := $(top_dir)/bin
 all : $(dirs_OK)
 
 $(dirs_OK) : %/OK : 
-	LC_ALL=C $(MAKE) --warn-undefined-variables -C $* -f $(notdir $(wildcard $*/*.mk)) > $*/$*.log 2>&1
+	LC_ALL=C $(MAKE) --warn-undefined-variables -C $* -f $(notdir $(wildcard $*/*.mk)) # > $*/$*.log 2>&1
