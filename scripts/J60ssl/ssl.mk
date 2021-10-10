@@ -7,11 +7,14 @@ need_ssl:=$(call hvar,need_ssl)
 hostname:=$(call hvar,hostname)
 backup_letsencrypt:=$(wildcard backup/letsencrypt)
 
+# (1) periodically run make -f ssl.mk backup_etc_letsencrypt to make a backup
+# (2) explicitly run make -f ssl.mk ssl_config_restore to restore backup
+
 ifeq ($(need_ssl),1)
 ifeq ($(backup_letsencrypt),)
   targets := ssl_config_first_time
 else
-  targets := ssl_config_restore
+  targets := 
 endif
 else
   targets :=
@@ -36,6 +39,9 @@ ssl_config_first_time : /usr/bin/certbot backup/dir
 	chmod 755 /etc/letsencrypt/archive
 	chmod 644 /etc/letsencrypt/archive/$(hostname)/fullchain*.pem
 	chmod 644 /etc/letsencrypt/archive/$(hostname)/privkey*.pem
+	rsync -avz /etc/letsencrypt backup/
+
+backup_etc_letsencrypt :
 	rsync -avz /etc/letsencrypt backup/
 
 ssl_config_restore : /usr/bin/certbot
