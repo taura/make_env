@@ -51,6 +51,7 @@ git_host := $(shell echo $(env_git) | sed -e 's!ssh://!!' -e s/git@// -e 's:/.*:
 key_pem:=$(key_name).pem
 ssh:=ssh -A -i $(key_pem)
 scp:=scp -i $(key_pem)
+rsync:=rsync -az --rsh="ssh -i $(key_pem)"
 aws_sqlite:=../../data/aws.sqlite
 
 apt:=DEBIAN_FRONTEND=noninteractive apt -q -y -o DPkg::Options::=--force-confold
@@ -156,7 +157,8 @@ $(all_nodes_configured) : %.configured : %.ssh $(aws_sqlite)
 	# ----- configure $* : run local setup ----- 
 	cd ../../lscripts && make --warn-undefined-variables
 	# ----- configure $* : copy host database ----- 
-	$(scp) -r ../../data root@$$(cat addrs/$*):$(env_dir)/
+#	$(scp) -r ../../data root@$$(cat addrs/$*):$(env_dir)/
+	$(rsync) ../../data root@$$(cat addrs/$*):$(env_dir)/
 	# ----- configure $* : do configure ----- 
 	$(ssh) root@$$(cat addrs/$*) "cd $(env_dir)/scripts && make --warn-undefined-variables"
 
