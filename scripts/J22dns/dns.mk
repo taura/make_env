@@ -6,8 +6,8 @@ include ../common.mk
 dns_name:=$(call hvar,dns_name)
 noip_conf:=$(call hvar,noip_conf)
 ifneq ($(noip_conf),)
-#  targets := noip
-  targets :=
+  targets := noip
+#  targets :=
 else
   targets := 
 endif
