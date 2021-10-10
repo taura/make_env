@@ -1,0 +1,4 @@
+# note: following drive names seem to depend on volume and instance types
+# we must figure out
+# LABEL=HOME	/home		ext4	defaults,noatime,errors=remount-ro	  0	  1
+# UUID=fa4001e7-c142-4b5b-8236-0d6892e3411d       none swap sw 0 0

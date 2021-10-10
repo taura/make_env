@@ -1,0 +1,1 @@
+${nfs_server_hostname}:/home	/home		nfs	defaults,noatime        0	  1
