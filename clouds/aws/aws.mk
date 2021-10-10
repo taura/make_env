@@ -52,7 +52,8 @@ key_pem:=$(key_name).pem
 ssh:=ssh -A -i $(key_pem)
 scp:=scp -i $(key_pem)
 rsync:=rsync -az --rsh="ssh -i $(key_pem)"
-aws_sqlite:=../../data/aws.sqlite
+cloud_sqlite:=../../data/cloud.sqlite
+cloud_csv:=$(patsubst %.sqlite,%.csv,$(cloud_sqlite))
 
 apt:=DEBIAN_FRONTEND=noninteractive apt -q -y -o DPkg::Options::=--force-confold
 aptinst:=$(apt) install
@@ -120,9 +121,13 @@ $(compute_nodes_running) : %.running : addrs
 
 # after the master and compute nodes start running,
 # make a database of IP addresses
-$(aws_sqlite) : $(master_node_running) $(compute_nodes_running)
+$(cloud_sqlite) : $(master_node_running) $(compute_nodes_running)
 	# ===== make host database into $@ ===== 
 	./ensure_instance --key-name $(key_name) $(ensure_instance_common_opts) --dont-run --database $@ $(all_nodes)
+
+$(cloud_csv) : $(cloud_sqlite)
+	# ===== make host database into $@ ===== 
+	sqlite3 -header -separator , $(cloud_sqlite) "select * from hosts" > $@
 
 # after a node is running, wait until it is root-accessible via ssh.
 # a node is initially accessible via 
@@ -140,7 +145,7 @@ $(master_node_ssh) $(compute_nodes_ssh) : %.ssh : %.running
 
 # configure a node after all nodes are running
 $(compute_nodes_configured) : $(master_node_configured) 
-$(all_nodes_configured) : %.configured : %.ssh $(aws_sqlite)
+$(all_nodes_configured) : %.configured : %.ssh $(cloud_sqlite) $(cloud_csv)
 	# ===== configure $* ===== 
 #	$(ssh) root@$$(cat addrs/$*) "dpkg --configure -a --force-confdef"
 	- $(ssh) root@$$(cat addrs/$*) "$(apt) update"
