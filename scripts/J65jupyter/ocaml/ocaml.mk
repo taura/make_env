@@ -9,11 +9,7 @@ else
 jupyter_kernelspec_inst := sudo jupyter kernelspec install
 endif
 
-ifeq ($(shell hostname),taulec.zapto.org)
-	opam_user := share
-else
-	opam_user := tau
-endif
+opam_user:=$(call gvar,opam_user)
 
 ocaml : jupyter
 	id $(opam_user) # if this fails, consider setting opam_user= in the make command line (make -f ocaml.mk opam_user=...)
