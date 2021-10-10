@@ -5,11 +5,10 @@
 include ../common.mk
 
 is_nfs_server:=$(call hvar,is_nfs_server)
+fstab:=$(data_dir)/$(call hvar,fstab)
 ifeq ($(is_nfs_server),1)
-  fstab:=templates/fstab_server
   targets:=nfs_common fstab nfs_server exports
 else
-  fstab:=templates/fstab_client
   targets:=nfs_common fstab
 endif
 export nfs_server_hostname = $(call query,select hostname from hosts where is_nfs_server=1 limit 1)
