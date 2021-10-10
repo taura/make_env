@@ -24,5 +24,5 @@ noip-2.1.9-1/noip2 : noip-duc-linux.tar.gz
 	cd noip-2.1.9-1 && make
 
 /usr/local/etc/no-ip2.conf : $(data_dir)/$(noip_conf)
-	$(inst) $(noip_conf) $@
+	$(inst) $< $@
 
