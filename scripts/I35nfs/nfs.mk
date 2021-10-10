@@ -25,7 +25,7 @@ nfs_server :
 
 exports : nfs_server work/dir
 	(echo -n "/home " ; for c in $(nfs_clients); do echo -n "$$c(rw,async,no_root_squash,no_subtree_check) "; done ; echo "") > work/etc_exports.add
-	$(kv_merge) /etc/exports etc_exports.add > work/etc_exports
+	$(kv_merge) /etc/exports work/etc_exports.add > work/etc_exports
 	$(inst) work/etc_exports /etc/exports
 	exportfs -a
 
