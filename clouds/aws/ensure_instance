@@ -1,0 +1,582 @@
+#!/usr/bin/python3
+
+# ma-db-us-west-oregon-key
+# make IAM user
+
+import boto3
+import time,sys,argparse,sqlite3,os,pdb
+
+dbg=2
+
+def Es(s):
+    sys.stderr.write(s)
+
+def get_ec2_client():
+    """
+    if you set AWS_PROFILE=xxx in the environment variables,
+    then it gets aws_access_key_id, aws_secret_access_key, and region
+    from [xxx] section in ~/.aws/credentials.
+    otherwise it gets aws_access_key_id and aws_secret_access_key
+    from [default] section in ~/.aws/credentials and 
+    region from [default] section in ~/.aws/config
+    """
+    ec2 = boto3.client("ec2")
+    return ec2
+                       
+def attach_volumes(instance_id, volume_specs):
+    """
+    instance_id : EC2 instance id (string, like i-0fd0dd612d90f3608)
+    volume_specs : list of volume_id:device
+    (e.g., vol-00c5ce6619dc4e767:/dev/xvdf)
+    attach specified volumes to the instance_id as the specified device.
+    
+    BUG?: the device that appears in the host may be different
+    from the specified one. and it depends on EBS volume types
+    and instance types. 
+    device names are used in the fstab script (xxxx_env/ssripts/I??fstab/). 
+    currently, we have no mechanism to communicate the
+    actual device name to the script. the fstab script
+    needs to know the actual device names.
+    """
+    ec2 = get_ec2_client()
+    if len(volume_specs) > 0:
+        Es("attaching volumes to %s\n" % instance_id)
+    for volume_spec in volume_specs:
+        volume_device = volume_spec.split(":", 1)
+        if len(volume_device) != 2:
+            Es(" warning: ill-formed volume spec %s ignored\n")
+            continue
+        # volume_id is like "vol-00c5ce6619dc4e767"
+        # device is like    "/dev/xvdf"
+        [ volume_id, device ] = volume_device
+        # check if the device is not already used
+        describe_response = ec2.describe_volumes(VolumeIds=[volume_id])
+        volumes = describe_response["Volumes"]
+        n_volumes = len(volumes)
+        if n_volumes == 0:
+            Es(" warning: volume %s not found (ignored)\n" % volume_id)
+            continue
+        assert(n_volumes == 1), volume_id
+        volume = volumes[0]
+        if len(volume["Attachments"]) > 0:
+            Es(" volume %s already attached\n" % volume_id)
+            continue
+        Es("attaching volume %s\n" % volume_id)
+        # attach it.
+        # TODO: do we have to wait for it to have been attached?
+        attach_response = ec2.attach_volume(VolumeId=volume_id,
+                                            InstanceId=instance_id,
+                                            Device=device)
+
+def find_instances_by_tag_name(name):
+    """
+    instances run by this command will have a tag
+    describing its easy-to-remember symbolic name (like node000).
+    instance["Tags"] is a list of { "Key" : key_name, "Value" : the value of the key }
+    find a node that has the specified name in the tag.
+    note that there may be multiple such instances (of various states).
+    """
+    ec2 = get_ec2_client()
+    describe_response = ec2.describe_instances()
+    instances = []
+    for i,reservation in enumerate(describe_response["Reservations"]):
+        for j,instance in enumerate(reservation["Instances"]):
+            # check if instance has:
+            #   instance["Tags"] = [ ..., { "Key" : "Name", "Value" : name }, ... ]
+            if "Tags" in instance:
+                tags = instance["Tags"]
+                for kv_dict in tags:
+                    if kv_dict["Key"] == "Name" and kv_dict["Value"] == name:
+                        instances.append(instance)
+    return instances
+
+def find_instance_by_id(instance_id):
+    """
+    find the instance having the specified instance id.
+    there must be only one such instance
+    """
+    ec2 = get_ec2_client()
+    describe_response = ec2.describe_instances(InstanceIds=[ instance_id ])
+    instances = []
+    for i,reservation in enumerate(describe_response["Reservations"]):
+        for j,instance in enumerate(reservation["Instances"]):
+            if instance["InstanceId"] == instance_id:
+                instances.append(instance)
+    assert(len(instances) <= 1), (instance_id, len(instances))
+    if len(instances) == 1:
+        return instances[0]
+    else:
+        return None
+    
+def wait_for_instance_to_become_state(instance_id, target_state,
+                                      legitimate_intermediate_states):
+    """
+    wait for the specified instance to become the target_state
+    (pending, running, stopping, stopped, shutting-down, terminated).
+    legitimate_intermediate_states is a list of possible states
+    we may see during waiting (if we see other states, it is likely
+    to be a bug, so we quit).
+    """
+    if dbg>=2:
+        Es("wait for %s to be %s\n" % (instance_id, target_state))
+    t0 = time.time()
+    t = 0
+    t_end = 100                 # hardwired timeout value = 100 sec
+    state = None                # unknown
+    while t < t_end:
+        instance = find_instance_by_id(instance_id)
+        state = instance["State"]["Name"]
+        t = time.time() - t0
+        if dbg>=2:
+            Es(" %f : %s %s\n" % (t, instance_id, state))
+        assert(state in legitimate_intermediate_states), \
+            (state, legitimate_intermediate_states)
+        if state == target_state:
+            break
+        time.sleep(5.0)
+    if state == target_state:
+        return instance
+    else:
+        Es("error: timeout. %s is not %s after %f sec\n"
+           % (instance_id, target_state, t))
+        return None
+
+def wait_for_instance_running(instance_id):
+    """
+    wait for instance (specified by instnce_id) to
+    become in the running state. meanwhile, it must
+    be in pending state.
+    """
+    return wait_for_instance_to_become_state(instance_id, "running",
+                                             [ "pending", "running" ])
+
+def wait_for_instance_stopped(instance_id):
+    """
+    wait for instance (specified by instance_id) to 
+    become in the stopped state. 
+    """
+    return wait_for_instance_to_become_state(instance_id, "stopped",
+                                             [ "stopping", "stopped" ])
+
+def run_instance(name, args):
+    """
+    run a new instance and tag it with name.
+    """
+    if dbg>=2:
+        Es("running a new instance %s\n" % name)
+    if args.key_name is None:
+        Es("error: need to run instance yet you didn't specify --key-name\n")
+        return None
+    if args.volumetype is not None and args.volumesize is not None:
+        BlockDeviceMappingsVal = [
+            {
+                "DeviceName": "/dev/sda1",
+                "Ebs": {
+                    "DeleteOnTermination": True,
+                    "VolumeType": args.volumetype,
+                    "VolumeSize": args.volumesize,
+                }
+            }
+        ]
+    else:
+        BlockDeviceMappingsVal = []
+    if args.arn_profile is not None:
+       IamInstanceProfileVal = {"Arn" : args.arn_profile}
+    else:
+       IamInstanceProfileVal = {}
+    if args.securitygroup is not None:
+       SecurityGroupIdsVal = [args.securitygroup]
+    else:
+       SecurityGroupIdsVal = []
+    ec2 = get_ec2_client()
+    run_response = ec2.run_instances(ImageId=args.image_id,
+                                     InstanceType=args.instance_type,
+                                     Placement={
+                                         "AvailabilityZone" : args.availability_zone
+                                     },
+                                     MinCount=1, MaxCount=1,
+                                     KeyName=args.key_name,
+                                     BlockDeviceMappings=BlockDeviceMappingsVal,
+                                     IamInstanceProfile=IamInstanceProfileVal,
+                                     SecurityGroupIds=SecurityGroupIdsVal)
+    instances = run_response["Instances"]
+    assert(len(instances) == 1), instances
+    instance = instances[0]
+    instance_id = instance["InstanceId"]
+    if dbg>=2:
+        Es(" instance_id : %s, attach the name %s\n"
+           % (instance_id, name))
+    ec2.create_tags(Resources=[ instance_id ],
+                    Tags=[ { "Key" : "Name", "Value" : name } ])
+    return instance
+
+def wait_for_spot_request_to_be_found(spotrequest_id):
+    if dbg>=2:
+        Es("wait for %s to be found\n" % spotrequest_id)
+    ec2 = get_ec2_client()
+    t0 = time.time()
+    t = 0
+    t_end = 10                 # hardwired timeout value = 100 sec
+    while t < t_end:
+        try:
+            return ec2.describe_spot_instance_requests(SpotInstanceRequestIds=[spotrequest_id])
+        except boto3.exceptions.Boto3Error:
+            traceback.print_exc()
+            t = time.time() - t0
+    return None
+    
+def wait_for_spot_instance_to_become_state(spotrequest_id, target_state,
+                                           legitimate_intermediate_states):
+    if dbg>=2:
+        Es("wait for %s to be %s\n" % (spotrequest_id, target_state))
+    ec2 = get_ec2_client()
+    t0 = time.time()
+    t = 0
+    t_end = 100                 # hardwired timeout value = 100 sec
+    state = None                # unknown
+    while t < t_end:
+        response = ec2.describe_spot_instance_requests(SpotInstanceRequestIds=[spotrequest_id])
+        state = response["SpotInstanceRequests"][0]["Status"]["Code"]
+        t = time.time() - t0
+        assert(state in legitimate_intermediate_states), \
+            (state, legitimate_intermediate_states)
+        if state == target_state:
+            break
+    if state == target_state:
+        return response["SpotInstanceRequests"][0]
+    else:
+        Es("error: timeout. %s is not %s after %f sec\n"
+           % (spotrequest_id, target_state))
+        return None
+
+def wait_for_spot_instance_fulfilled(spotrequest_id):
+    res = wait_for_spot_request_to_be_found(spotrequest_id)
+    if res is None:
+        return None
+    return wait_for_spot_instance_to_become_state(spotrequest_id, "fulfilled",
+                                                  [ "pending-evaluation",
+                                                    "pending-fulfillment",
+                                                    "fulfilled" ])
+
+def run_spot_instance(name, args):
+    """
+    run a new instance and tag it with name.
+    """
+    if dbg>=2:
+        Es("running a new instance %s\n" % name)
+    if args.key_name is None:
+        Es("error: need to run instance yet you didn't specify --key-name\n")
+        return None
+    ec2 = get_ec2_client()
+    LaunchSpecificationDict = {
+        "ImageId": args.image_id,
+        "InstanceType": args.instance_type,
+        "KeyName": args.key_name,
+        "Placement" : {
+            "AvailabilityZone" : args.availability_zone
+        }
+    }
+    if args.volumetype is not None and args.volumesize is not None:
+        LaunchSpecificationDict["BlockDeviceMappings"] = [
+            {
+                "DeviceName": "/dev/sda1",
+                "Ebs": {
+                    "DeleteOnTermination": True,
+                    "VolumeType": args.volumetype,
+                    "VolumeSize": args.volumesize,
+                }
+            }
+        ]
+    if args.arn_profile is not None:
+       LaunchSpecificationDict["IamInstanceProfile"] = { "Arn": args.arn_profile }
+    if args.securitygroup is not None:
+       LaunchSpecificationDict["SecurityGroupIds"] = [args.securitygroup]
+    run_spot_response = ec2.request_spot_instances(
+        Type="one-time",
+        #Type="persistent",
+        InstanceCount=1,
+        LaunchSpecification=LaunchSpecificationDict)
+    spotrequests = run_spot_response["SpotInstanceRequests"]
+    assert(len(spotrequests) == 1), spotrequests
+    spotrequest = spotrequests[0]
+    spotrequest_id = spotrequest['SpotInstanceRequestId']
+    instance = wait_for_spot_instance_fulfilled(spotrequest_id)
+    instance_id = instance["InstanceId"]
+    if instance_id:
+        if dbg>=2:
+            Es(" instance_id : %s, attach the name %s\n"
+               % (instance_id, name))
+        ec2.create_tags(Resources=[ instance_id ],
+                Tags=[ { "Key" : "Name", "Value" : name } ])
+    return instance
+
+def start_instance(instance_id):
+    """
+    start the stopped instance (specified by instance_id)
+    """
+    if dbg>=2:
+        Es("starting %s\n" % instance_id)
+    ec2 = get_ec2_client()
+    start_response = ec2.start_instances(InstanceIds=[ instance_id ])
+    instances = start_response["StartingInstances"]
+    assert(len(instances) == 1), instances
+    instance = instances[0]
+    return instance
+    
+def find_candidate_instance(instances):
+    """
+    instances : instances having the same name (e.g., node000).
+    look at their states and pick an appropriate one to use
+    """
+    instances_by_state = {}
+    for instance in instances:
+        state = instance["State"]["Name"]
+        if state not in instances_by_state:
+            instances_by_state[state] = []
+        instances_by_state[state].append(instance)
+    candidates = []
+    for state in [ "running", "stopped", "stopping" ]:
+        candidates.extend(instances_by_state.get(state, []))
+    if len(candidates) > 1:
+        Es("warning: multiple (%d) running/stopping/stopped"
+           " instances. return any one\n" % len(candidates))
+    for state in [ "running", "pending", "stopped",
+                   "stopping", "shutting-down", "terminated" ]:
+        candidates = instances_by_state.get(state, [])
+        if len(candidates) >= 1:
+            return candidates[0]
+    return None
+    
+def ensure_instance_running(name, args):
+    """
+    if args.run is true, ensure an instance is running 
+    with the specified name. that is,
+    (0) do nothing if one is already running.
+    (1) start the instance if there is a stopped/stopping one.
+    (2) run a new instance if there are none.
+    if args.run is false, simply find an instance of 
+    a running/pending state and wait for it to become
+    running.
+    """
+    # all instances of the specified name
+    instances = find_instances_by_tag_name(name)
+    # an instance of an appropriate state
+    instance = find_candidate_instance(instances)
+    state = instance["State"]["Name"] if instance else "not_found"
+    if dbg>=2:
+        Es("current state of %s : %s\n" % (name, state))
+    if args.run and state not in [ "pending", "running" ]:
+        if state in [ "stopped", "stopping" ]:
+            instance_id = instance["InstanceId"]
+            wait_for_instance_stopped(instance_id)
+            instance = start_instance(instance_id)
+        else:
+            assert(state in [ "shutting-down", "terminated", "not_found" ]), state
+            if args.use_spot:
+                instance = run_spot_instance(name, args)
+            else:
+                instance = run_instance(name, args)
+    if instance:
+        return wait_for_instance_running(instance["InstanceId"])
+    else:
+        return None
+
+def check_for_instance_attrs(instance_id, attrs):
+    """
+    instance_ids : list of instance ids
+    attrs : list of attributes all instances must have (e.g., PublicIpAddress)
+    return 1 of all instances have all addresses. otherwise return 0.
+    """
+    ec2 = get_ec2_client()
+    describe_response = ec2.describe_instances(InstanceIds=[ instance_id ])
+    instance = None
+    for i,reservation in enumerate(describe_response["Reservations"]):
+        for j,instance in enumerate(reservation["Instances"]):
+            for attr in attrs:
+                if attr not in instance:
+                    Es("note: instance %s does not (yet) have %s\n"
+                       % (instance["InstanceId"], attr))
+                    return None
+    return instance
+    
+def wait_for_instance_attrs(instance_id, attrs):
+    """
+    wait for the instance (of instance_id) to have
+    all the specified attributes, until timeout
+    (1000 sec)
+    """
+    t = time.time()
+    t_end = t + 1000.0          # hardwired timeout value
+    while time.time() < t_end:
+        instance = check_for_instance_attrs(instance_id, attrs)
+        if instance:
+            return instance     # OK
+        time.sleep(5)
+    Es("error: some instances do not have addresses\n")
+    return 0
+    
+def wait_for_instances_attrs(hosts_and_instance_ids, attrs):
+    """
+    hosts_and_instance_ids : list of (host, instance_id)s
+    attrs : list of attributes all instances must have (e.g., PublicIpAddress)
+    wait for all instances to have all the specified attributes.
+    return the list of (host, instance)s
+    """
+    hosts_and_instances = []
+    for host,instance_id in hosts_and_instance_ids:
+        instance = wait_for_instance_attrs(instance_id, attrs)
+        if instance:
+            hosts_and_instances.append((host, instance))
+        else:
+            Es("error: some instances do not have addresses\n")
+            return None
+    return hosts_and_instances
+
+#def make_database(hosts_and_instance_ids, hosts_sqlite):
+def make_database(hosts, hosts_sqlite):
+    """
+    hosts_and_instance_ids : list of (host, instance_id)
+    hosts_sqlite : a sqltie3 database name or None (to mean :memory:)
+
+    make a database of host,PublicIpAddress,PrivateIpAddress
+    of all running hosts and return the connection to the
+    database.
+    """
+    ec2 = get_ec2_client()
+    describe_response = ec2.describe_instances()
+    hosts_and_instance_ids = []
+    hosts_and_instances = []
+    for i,reservation in enumerate(describe_response["Reservations"]):
+        for j,instance in enumerate(reservation["Instances"]):
+            if instance["State"]["Name"] != "running":
+                continue
+            # check if instance has:
+            #   instance["Tags"] = [ ..., { "Key" : "Name", "Value" : name }, ... ]
+            if "Tags" in instance:
+                tags = instance["Tags"]
+                for kv_dict in tags:
+                    if kv_dict["Key"] == "Name" and kv_dict["Value"] in hosts:
+                        hosts_and_instance_ids.append((kv_dict["Value"], instance["InstanceId"]))
+                        hosts_and_instances.append((kv_dict["Value"], instance))
+    hosts_and_instances.sort(key=lambda x : x[0])
+    
+    cols = "PublicIpAddress,PrivateIpAddress,PrivateDnsName"
+    col_list = cols.split(",")
+    #hosts_and_instances = wait_for_instances_attrs(hosts_and_instance_ids, col_list)
+    if hosts_and_instances is None:
+        return None
+    if hosts_sqlite is None:
+        hosts_sqlite = ":memory:"
+    co = sqlite3.connect(hosts_sqlite)
+    co.execute("drop table if exists hosts")
+    co.execute("create table hosts(host,is_master,%s)" % cols)
+    q_cols = ",".join([ "?" for col in col_list ])
+    insert_cmd = "insert into hosts (host,is_master,%s) values (?,?,%s)" % (cols, q_cols)
+    for host,instance in hosts_and_instances:
+        #print(instance.keys())
+        if host == hosts[0]:
+            is_master = 1
+        else:
+            is_master = 0
+        vals = tuple([ host, is_master ] + [ instance[c] for c in col_list ])
+        co.execute(insert_cmd, vals)
+    co.commit()
+    return co
+
+def query_database(co, columns, show_header, separator):
+    """
+    columns : list of column names
+    show_header: true or false
+    separator : a string
+    run the query
+         select COLUMNS from hosts
+    and show the result.
+    use SEPARATOR to separate columns.
+    show header if SHOW_HEADER is true.
+    """
+    if show_header:
+            print(separator.join(columns))
+    if len(columns) > 0:
+        query = "select %s from hosts" % (",".join(columns))
+        for row in co.execute(query):
+            print(separator.join(row))
+
+def parse_args(argv):
+    p = argparse.ArgumentParser(description=r"""
+    ensure there are running instances of the specified hostnames,
+    optionally making a database of running hosts.
+""")
+    p.add_argument("hosts", metavar="NAME", type=str, nargs="*",
+                   help="an (arbitrary) name of the host (e.g., node000)")
+    p.add_argument("--profile", metavar="PROFILE", type=str,
+                   action="store",
+                   help="read [PROFILE] section of ~/.aws/credentials when talking to EC2")
+    p.add_argument("--image-id", metavar="IMAGE_ID", type=str,
+                   action="store", default="ami-0def3275",
+                   help="instantiate IMAGE_ID when running a new instance (running/stopped/stopping instance is unaffected)")
+    p.add_argument("--instance-type", metavar="INSTANCE_TYPE", type=str,
+                   action="store", default="t2.micro",
+                   help="use INSTANCE_TYPE when running a new instance (running/stopped/stopping instance is unaffected)")
+    p.add_argument("--region-name", metavar="REGION_NAME", type=str,
+                   action="store", default="us-west-2",
+                   help="use REGION when running a new instance (running/stopped/stopping instance is unaffected). must match --availability-zone")
+    p.add_argument("--availability-zone", metavar="AVAILABILITY_ZONE", type=str,
+                   action="store", default="us-west-2b",
+                   help="put in AVAILABILITY_ZONE when running a new instance (running/stopped/stopping instance is unaffected). must match --region-name")
+    p.add_argument("--key-name", metavar="KEY_NAME", type=str, 
+                   action="store", help="use KEY_NAME when running a new instance. the new instance will become accessible by ssh -i KEY_NAME.pem ...")
+    p.add_argument("--volume", metavar="VOLUME:DEVICE", type=str, action="append",
+                   default=[], help="attach VOLUME to the first specified host as DEVICE (e.g., /dev/sdf; there are cases DIVICE part is not respected, however)")
+    p.add_argument("--database", "-d", metavar="HOSTS_SQLITE", type=str,
+                   dest="hosts_sqlite", action="store", 
+                   default=None, # None means memory
+                   help="sqlite3 database filename to store info of the running hosts")
+    p.add_argument("--columns", "-C", metavar="COL,COL,..", type=str,
+                   dest="columns", action="store", 
+                   default="PublicIpAddress",
+                   help="comma-separated columns to print")
+    p.add_argument("--separator", "-s", metavar="SEPARATOR", type=str,
+                   dest="separator", action="store", 
+                   default="|",
+                   help="string to separate columns")
+    p.add_argument("--header", 
+                   dest="header", action="store_true", 
+                   help="show header prior to print columns")
+    p.add_argument("--dont-run", 
+                   dest="run", action="store_false", 
+                   help="do not take action to run a new (or a stopped/stopping) instance. just show the info about the running instance")
+    p.add_argument("--use_spot", action="store", type=int, default=1)
+    p.add_argument("--arn_profile", metavar="PROFILE", type=str, action="store")
+    p.add_argument("--securitygroup", metavar="security group", type=str, action="store")
+    p.add_argument("--volumesize", action="store", type=int)
+    p.add_argument("--volumetype", action="store", type=str)
+    args = p.parse_args(argv)
+    return args
+
+def main():
+    args = parse_args(sys.argv[1:])
+    if args.profile:
+        os.environ["AWS_PROFILE"] = args.profile
+    #hosts_and_instance_ids = []
+    if not args.hosts_sqlite:
+        for i,host in enumerate(args.hosts):
+            instance = ensure_instance_running(host, args)
+            if instance:
+                instance_id = instance["InstanceId"]
+                print(instance["PublicIpAddress"])
+                #hosts_and_instance_ids.append((host, instance_id))
+                if i == 0:
+                    attach_volumes(instance_id, args.volume)
+                return 0
+            else:
+                return 1
+    else:
+        co = make_database(args.hosts, args.hosts_sqlite)
+        if co:
+            query_database(co, args.columns.split(","), args.header, args.separator)
+            co.close()
+            return 0                # OK
+        else:
+            return 1                # NG
+
+sys.exit(main())

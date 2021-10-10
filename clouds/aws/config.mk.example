@@ -1,0 +1,59 @@
+# setting the following variables is optional.
+# see comments in aws.mk for their meaning
+
+availability_zone := ap-northeast-1a
+master_node_image_id := ami-073169a417fb5c921
+compute_node_image_id := ami-073169a417fb5c921
+
+master_node_use_spot := 0
+compute_node_use_spot := 1
+
+# you must at least change the following line
+# to set it to your key name
+key_name := ec2-tau-ap-northeast-1-key
+
+master_node_instance_type ?= r5.2xlarge
+compute_node_instance_type ?= p3.2xlarge
+# p3.2xlarge
+# r5.2xlarge r5.large
+# t2.micro
+
+# number of compute nodes (>= 0). 0 means
+# that only the master will run
+
+n_compute_nodes := 0
+reconf := 0
+
+# options common between master and compute nodes
+ensure_instance_common_opts := 
+ensure_instance_common_opts += --profile taulec
+
+# ----------------------------
+# master node options
+# ----------------------------
+ensure_instance_master_node_opts :=
+# 500GB home partition
+ensure_instance_master_node_opts += --volume vol-0cd8a41866f84dbac:/dev/xvdf
+# 100GB swap partition
+ensure_instance_master_node_opts += --volume vol-0f7a9930d578e0074:/dev/sdg
+
+
+# 30GB root partition
+ensure_instance_master_node_opts += --volumesize 40
+ensure_instance_master_node_opts += --volumetype gp2
+
+# ----------------------------
+# compute node options
+# ----------------------------
+ensure_instance_compute_node_opts :=
+ensure_instance_compute_node_opts += --volumesize 50
+ensure_instance_compute_node_opts += --volumetype gp2
+
+# ----------------------------
+# variables that we may want to change in future 
+# when the project scales
+# ----------------------------
+
+env_git := ssh://git@gitlab.eidos.ic.i.u-tokyo.ac.jp/tau/taulec_env.git
+
+
