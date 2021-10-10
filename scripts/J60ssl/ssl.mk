@@ -5,10 +5,10 @@ include ../common.mk
 
 need_ssl:=$(call hvar,need_ssl)
 hostname:=$(call hvar,hostname)
-etc_letsencrypt:=$(wildcard /etc/letsencrypt)
+backup_letsencrypt:=$(wildcard backup/letsencrypt)
 
 ifeq ($(need_ssl),1)
-ifeq ($(etc_letsencrypt),)
+ifeq ($(backup_letsencrypt),)
   targets := ssl_config_first_time
 else
   targets := ssl_config_restore
@@ -30,16 +30,19 @@ OK : $(targets)
 /usr/bin/certbot : /snap/bin/certbot
 	ln -sf /snap/bin/certbot /usr/bin/certbot
 
-ssl_config_first_time : /usr/bin/certbot
+ssl_config_first_time : /usr/bin/certbot backup/dir
 	certbot --apache -d $(hostname) -n --agree-tos --email tau@eidos.ic.i.u-tokyo.ac.jp
 	chmod 755 /etc/letsencrypt/live
 	chmod 755 /etc/letsencrypt/archive
 	chmod 644 /etc/letsencrypt/archive/$(hostname)/fullchain*.pem
 	chmod 644 /etc/letsencrypt/archive/$(hostname)/privkey*.pem
+	rsync -avz /etc/letsencrypt bakcup/
 
 ssl_config_restore : /usr/bin/certbot
-	rsync -avz letsencrypt_backup/$(hostname)/letsencrypt /etc/
-	rsync -avz letsencrypt_backup/$(hostname)/000-default-le-ssl.conf /etc/apache2/sites-available/
+	rsync -avz backup/letsencrypt/$(hostname)/letsencrypt /etc/
+	rsync -avz backup/letsencrypt/$(hostname)/000-default-le-ssl.conf /etc/apache2/sites-available/
 	ln -sf /etc/apache2/sites-available/000-default-le-ssl.conf /etc/apache2/sites-enabled/
 	service apache2 restart
 
+backup/dir :
+	mkdir -p $@
