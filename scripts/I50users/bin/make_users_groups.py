@@ -46,7 +46,7 @@ def run(cmd, input_str):
     """
     print(cmd)
     comp = subprocess.run(cmd, shell=True, input=input_str, encoding="utf-8", check=False)
-    print("--> {}".format(comp.returncode))
+    #print("--> {}".format(comp.returncode))
     return comp.returncode
 
 def slappasswd(passwd):
