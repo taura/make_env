@@ -3,7 +3,8 @@
 #
 include ../common.mk
 
-subdirs := jupyter c ocaml vpython bash nbgrader sos
+subdirs := jupyter c ocaml bash nbgrader sos
+# vpython 
 targets := $(addsuffix /OK,$(subdirs))
 
 OK : $(targets)
