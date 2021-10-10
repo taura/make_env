@@ -165,5 +165,5 @@ $(all_nodes_configured) : %.configured : %.ssh $(cloud_sqlite) $(cloud_csv)
 #	$(scp) -r ../../data root@$$(cat addrs/$*):$(env_dir)/
 	$(rsync) ../../data root@$$(cat addrs/$*):$(env_dir)/
 	# ----- configure $* : do configure ----- 
-#	$(ssh) root@$$(cat addrs/$*) "cd $(env_dir)/scripts && make --warn-undefined-variables"
+	$(ssh) root@$$(cat addrs/$*) "cd $(env_dir)/scripts && make --warn-undefined-variables"
 
