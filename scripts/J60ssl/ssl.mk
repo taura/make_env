@@ -36,7 +36,7 @@ ssl_config_first_time : /usr/bin/certbot backup/dir
 	chmod 755 /etc/letsencrypt/archive
 	chmod 644 /etc/letsencrypt/archive/$(hostname)/fullchain*.pem
 	chmod 644 /etc/letsencrypt/archive/$(hostname)/privkey*.pem
-	rsync -avz /etc/letsencrypt bakcup/
+	rsync -avz /etc/letsencrypt backup/
 
 ssl_config_restore : /usr/bin/certbot
 	rsync -avz backup/letsencrypt/$(hostname)/letsencrypt /etc/
