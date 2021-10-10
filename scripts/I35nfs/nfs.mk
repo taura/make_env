@@ -15,6 +15,8 @@ endif
 export nfs_server_hostname = $(call query,select hostname from hosts where is_nfs_server=1 limit 1)
 export nfs_clients = $(call query,select PrivateIpAddress from hosts)
 
+$(error $(nfs_clients))
+
 OK : $(targets)
 
 nfs_common :
