@@ -5,7 +5,7 @@
 include ../common.mk
 
 is_nfs_server:=$(call hvar,is_nfs_server)
-fstab:=$(data_dir)/$(call hvar,fstab)
+fstab:=$(data_dir)/fstab/$(call hvar,fstab)
 ifeq ($(is_nfs_server),1)
   targets:=nfs_common fstab nfs_server exports
 else
