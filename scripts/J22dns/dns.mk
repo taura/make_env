@@ -5,8 +5,8 @@ include ../common.mk
 
 dns_name:=$(call hvar,dns_name)
 ifneq ($(dns_name),)
-#  targets := dns
-  targets :=
+  targets := dns
+#  targets :=
 else
   targets := 
 endif
