@@ -1,0 +1,84 @@
+#!/usr/bin/python3
+#
+# merges two files in a way useful for adding
+# entries to configuration files.
+#
+# If invoked with
+#
+#  kv_merge A B
+#
+# it addes the content of B to A in the following way.
+#
+# If B has a line that looks like:
+#
+#   foo what ever it is
+# 
+# a line in A that begins with foo, if any, is replaced by 
+# "foo what ever it is". Other lines simply pass through.
+# If A has no such line, "foo what ever it is" is output too.
+#
+#
+# For example, if A looks like:
+#
+# /dev/sda / hoge hoge hoge
+# charlie:/home /home hoge hoge hoge
+#
+# and B looks like:
+#
+# charlie:/home /home foo bar baz
+# charlie:/data /data foo bar baz
+#
+# then the output is like
+#
+# /dev/sda / hoge hoge hoge
+# charlie:/home /home foo bar baz
+# charlie:/data /data foo bar baz
+#
+# The fist line simply came through A because B has no line beginning 
+# with /dev/sda. The second line came from B's corresponding
+# line and A's second line was overwritten. The third line came through
+# B because A has no such line.
+#
+
+import re,sys
+
+def main():
+    if len(sys.argv) <= 2:
+        sys.stderr.write("usage: %s orig_file new_file [output]\n" % sys.argv[0])
+        sys.exit(1)
+    old_file = sys.argv[1]
+    new_file = sys.argv[2]
+    fp = open(old_file) if old_file != "-" else sys.stdin
+    np = open(new_file) if new_file != "-" else sys.stdin
+    wp = sys.stdout              # output file
+    if len(sys.argv) > 3:
+        wp = open(sys.argv[3], "wb")
+
+    # collect contents of B in 
+    # the form of (pattern, line)
+    patterns_and_lines = []
+    for line in np:
+        key = line.split(None, 1)[0]
+        patterns_and_lines.append((re.compile(key), line))
+
+    # scan A. match each line with patterns from B.
+    matched = {}
+    for line in fp:
+        for pat,new_line in patterns_and_lines:
+            if pat.match(line):
+                line = new_line
+                matched[pat] = None
+                break
+        if line[-1:] != "\n":
+            line = line + "\n"
+        wp.write(line)
+    # output B's lines not found in A
+    for pat,new_line in patterns_and_lines:
+        if pat not in matched:
+            if line[-1:] != "\n":
+                line = line + "\n"
+            wp.write(new_line)
+
+main()
+
+
