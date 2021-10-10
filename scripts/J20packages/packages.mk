@@ -9,7 +9,7 @@ pkgs += sqlite3
 pkgs += python3-pip
 pkgs += gcc
 pkgs += g++
-pkgs += gdb
+#pkgs += gdb
 #pkgs += clang
 #pkgs += clang-3.8
 #pkgs += clang-3.8-doc
@@ -24,10 +24,10 @@ pkgs += git
 pkgs += opam
 pkgs += camlp4-extra
 #pkgs += libcairo2-dev
-pkgs += emacs
-pkgs += gcc-doc
-pkgs += gdb-doc
-pkgs += gnuplot
+#pkgs += emacs
+#pkgs += gcc-doc
+#pkgs += gdb-doc
+#pkgs += gnuplot
 
 OK : $(pkgs)
 
