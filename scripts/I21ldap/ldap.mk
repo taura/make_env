@@ -78,6 +78,9 @@ remove_use_authtok : work/dir
 	sed -e 's/^password\(.*\)use_authtok\(.*\)$$/password \1 \2/g' /etc/pam.d/common-password > work/common-password
 	$(inst) work/common-password /etc/pam.d/common-password
 
+# ldap_server_hostname
+# ldap_domain_dn
+# ldap_domain_password
 /etc/sssd/sssd.conf : templates/sssd.conf /usr/sbin/sssd work/dir
 	envsubst < templates/sssd.conf > work/sssd.conf
 	$(inst) -m 600 work/sssd.conf /etc/sssd/sssd.conf
