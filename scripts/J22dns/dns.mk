@@ -11,7 +11,7 @@ else
   targets := 
 endif
 
-public_ip := $(query hvar,PublicIpAddress)
+public_ip := $(call hvar,PublicIpAddress)
 
 OK : $(targets)
 
