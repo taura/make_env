@@ -5,7 +5,7 @@
 #
 include ../common.mk
 
-is_ldap_server:=$(call hostvar,$(is_ldap_server))
+is_ldap_server:=$(call hvar,is_ldap_server)
 ifeq ($(is_ldap_server),1)
   targets := /usr/bin/slappasswd
 else

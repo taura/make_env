@@ -3,7 +3,7 @@
 #
 include ../common.mk
 
-is_ldap_server:=$(call hostvar,$(is_ldap_server))
+is_ldap_server:=$(call hvar,is_ldap_server)
 ifeq ($(is_ldap_server),1)
   targets := ldap_server ldap_client
 else
@@ -73,7 +73,7 @@ ldap_client : /etc/ldap.conf /etc/ldap.secret remove_use_authtok /etc/sssd/sssd.
 	$(inst) -m 600 ldap.secret $@
 
 remove_use_authtok :
-	sed -e 's/^password\(.*\)use_authtok\(.*\)$/password \1 \2/g' /etc/pam.d/common-password > common-password
+	sed -e 's/^password\(.*\)use_authtok\(.*\)$$/password \1 \2/g' /etc/pam.d/common-password > common-password
 	$(inst) common-password $@
 
 /etc/sssd/sssd.conf : templates/sssd.conf /usr/sbin/sssd
