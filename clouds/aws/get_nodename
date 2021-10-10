@@ -12,6 +12,6 @@ data_dir=$(realpath ${aws_dir}/../../data)
 #echo ${aws_dir}
 #echo ${data_dir}
 
-test ${data_dir}/aws.sqlite
+test ${data_dir}/cloud.sqlite
 
-sqlite3 ${data_dir}/aws.sqlite "select host from hosts where PrivateIpAddress=\"${priv_ip_addr}\""
+sqlite3 ${data_dir}/cloud.sqlite "select host from hosts where PrivateIpAddress=\"${priv_ip_addr}\""
