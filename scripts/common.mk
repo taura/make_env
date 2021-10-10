@@ -21,4 +21,8 @@ kv_merge:=$(bin_dir)/kv_merge
 db:=$(data_dir)/conf.sqlite
 nodename?=$(shell $(data_dir)/get_nodename)
 
+define hostvar
+$(shell sqlite3 $(db) "select $(1) from hosts where host=\"$(nodename)\"")
+endef
+
 .DELETE_ON_ERROR:

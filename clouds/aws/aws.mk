@@ -153,6 +153,8 @@ $(all_nodes_configured) : %.configured : %.ssh $(aws_sqlite)
 		fi; \
 		$(ssh) root@$$(cat addrs/$*) "echo -e \"Host $(git_host)\n\tStrictHostKeyChecking no\n\" >> ~/.ssh/config"; \
 	done
+	# ----- configure $* : run local setup ----- 
+	cd ../../lscripts && make --warn-undefined-variables
 	# ----- configure $* : copy host database ----- 
 	$(scp) -r ../../data root@$$(cat addrs/$*):$(env_dir)/
 	# ----- configure $* : do configure ----- 
