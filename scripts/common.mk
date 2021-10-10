@@ -22,7 +22,7 @@ db:=$(data_dir)/conf.sqlite
 nodename?=$(shell $(data_dir)/get_nodename)
 
 define query
-$(shell sqlite3 $(db) $(1))
+$(shell sqlite3 $(db) "$(1)")
 endef
 
 define hvar
