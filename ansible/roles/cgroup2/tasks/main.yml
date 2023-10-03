@@ -1,0 +1,37 @@
+---
+# tasks file for cgroup2
+
+- name: make write_to_cgroup_procs.c
+  copy:
+    src: files/{{ wtcp }}.c
+    dest: /tmp/{{ wtcp }}.c
+  vars:
+    wtcp : write_to_cgroup_procs
+
+- name: install gcc
+  apt:
+    name: gcc
+    state: present
+
+- name: compile {{ wtcp }}.c
+  shell:
+    cmd: "gcc /tmp/{{ wtcp }}.c -Wall -Wextra -O3 -o /usr/local/bin/{{ wtcp }} && chmod +s /usr/local/bin/{{ wtcp }}"
+  vars:
+    wtcp : write_to_cgroup_procs
+    
+- name: install cg_mem_limit
+  template:
+    src: templates/cg_mem_limit.py.j2
+    dest: /usr/local/bin/cg_mem_limit
+  vars:
+    wtcp : /usr/local/bin/write_to_cgroup_procs
+
+- name: make /etc/default/grub.d/50-cloudimg-settings.cfg
+  copy:
+    src: files/50-cloudimg-settings.cfg
+    dest: /etc/default/grub.d/50-cloudimg-settings.cfg
+
+- name: update-grub
+  command:
+    cmd: update-grub
+

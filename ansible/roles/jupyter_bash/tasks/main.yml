@@ -1,0 +1,11 @@
+---
+# tasks file for jupyter_bash
+
+- name: install pip3 module bash kernel
+  pip:
+    name: bash_kernel
+    state: present
+
+- name: install bash_kernel
+  command:
+    cmd: python3 -m bash_kernel.install

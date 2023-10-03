@@ -1,0 +1,31 @@
+---
+# tasks file for jupyter_c
+
+- name: install pip3 module jupyter-c-kernel
+  pip:
+    name: jupyter-c-kernel
+    state: present
+
+- name: copy c_kernel
+  copy:
+    src: files/c_kernel
+    dest: /tmp/
+    
+- name: install c_kernel
+  command:
+    cmd: jupyter kernelspec install /tmp/c_kernel
+
+- name: print jupyter_c_kernel directory
+  command:
+    cmd: python3 -c 'import jupyter_c_kernel,os; print(os.path.dirname(jupyter_c_kernel.__file__))'
+  register: print_jupyter_c_kernel_dir
+
+- name: set jupyter_c_kernel_dir
+  set_fact:
+    jupyter_c_kernel_dir: "{{ print_jupyter_c_kernel_dir.stdout }}"
+    
+- name: install patched c kernel.py
+  copy:
+    src: files/patched_c_kernel.py
+    dest: "{{ jupyter_c_kernel_dir }}/kernel.py"
+

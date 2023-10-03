@@ -1,0 +1,12 @@
+---
+# tasks file for pytorch_gpu
+
+- name: install pytorch for gpu
+  pip:
+    name:
+      - torch
+      - torchvision
+      - torchaudio
+    extra_args: --extra-index-url https://download.pytorch.org/whl/cu116
+    state: present
+

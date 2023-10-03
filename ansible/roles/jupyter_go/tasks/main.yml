@@ -1,0 +1,38 @@
+---
+# tasks file for jupyter_go
+
+- name: install golang
+  snap:
+    name: go
+    classic: yes
+    state: present
+  
+- name: install gophernotes
+  become: true
+  become_user: "{{ jupyter_user }}"
+  command:
+    cmd: go install github.com/gopherdata/gophernotes@latest
+
+- name: install go kernel
+  file:
+    path: /usr/local/share/jupyter/kernels/gophernotes
+    state: directory
+    mode: 0755
+
+- name: copy go kernel files
+  shell:
+    cp ~{{ jupyter_user }}/go/pkg/mod/github.com/gopherdata/gophernotes@v0.7.5/kernel/* /usr/local/share/jupyter/kernels/gophernotes/
+
+# cp ~{{ jupyter_user }}/go/src/github.com/gopherdata/gophernotes/kernel/* /usr/local/share/jupyter/kernels/gophernotes/
+
+- name: fix go kernel.json
+  replace:
+    path: /usr/local/share/jupyter/kernels/gophernotes/kernel.json
+    regexp: "gophernotes"
+    replace: "~{{ jupyter_user }}/go/bin/gophernotes"
+
+# - name: fix go kernel.json
+#   shell:
+#     sed -i s:gophernotes:~{{ jupyter_user }}/go/bin/gophernotes:g  /usr/local/share/jupyter/kernels/gophernotes/kernel.json
+
+    

@@ -1,0 +1,51 @@
+---
+# tasks file for jupyter_ocaml
+
+- name: install opam packages
+  apt:
+    name:
+      - opam
+      - m4
+      - pkg-config
+      - libzmq3-dev
+      - libzmq5
+      - libffi-dev
+      - libgmp-dev
+      - zlib1g-dev
+      - camlp4-extra
+      - libcairo2-dev
+    state: present
+
+# - name: opam init
+#   become: true
+#   become_user: "{{ jupyter_user }}"
+#   command:
+#     cmd: opam init --yes
+    
+# - name: opam install jupyter, jupyter-archimedes and menhir
+#   become: true
+#   become_user: "{{ jupyter_user }}"
+#   command:
+# # 20.04
+#     cmd: opam install --yes jupyter jupyter-archimedes menhir
+# # 22.04
+# #    cmd: opam install --confirm-level=unsafe-yes jupyter jupyter-archimedes menhir
+
+# - name: ocaml-jupyter-opam-genspec
+#   become: true
+#   become_user: "{{ jupyter_user }}"
+#   shell:
+#     cmd: ~{{ jupyter_user }}/.opam/default/bin/ocaml-jupyter-opam-genspec
+
+# - name: replace eval $(opam config env --switch=default --shell=sh) in ~{{ jupyter_user }}/.opam/default/share/jupyter/kernel.json
+#   become: true
+#   become_user: "{{ jupyter_user }}"
+#   replace:
+#     regexp: eval \$\(opam env --switch=default --shell=sh\)
+#     replace: . /home/{{ jupyter_user }}/.opam/opam-init/init.sh
+#     path: ~{{ jupyter_user }}/.opam/default/share/jupyter/kernel.json
+    
+# - name: ocaml kernelspec install 
+#   shell:
+#     cmd: jupyter kernelspec install --name ocaml-jupyter ~{{ jupyter_user }}/.opam/default/share/jupyter
+      

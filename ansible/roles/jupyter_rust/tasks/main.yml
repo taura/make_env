@@ -1,0 +1,29 @@
+---
+# tasks file for jupyter_rust
+
+- name: install rust
+  apt:
+    name:
+      - rustc
+      - rust-src
+      - cargo
+    state: present
+  
+- name: cargo install evcxr_jupyter
+  become: true
+  become_user: "{{ jupyter_user }}"
+  community.general.cargo:
+    name: evcxr_jupyter
+
+- name: evcxr_jupyter --install
+  become: true
+  become_user: "{{ jupyter_user }}"
+  command:
+    cmd: ~{{ jupyter_user }}/.cargo/bin/evcxr_jupyter --install
+
+- name: globally install jupyter kernel for rust
+  file:
+    path: /usr/local/share/jupyter/kernels/rust
+    src: ~{{ jupyter_user }}/.local/share/jupyter/kernels/rust
+    state: link
+

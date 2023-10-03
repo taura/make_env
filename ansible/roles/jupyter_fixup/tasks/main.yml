@@ -1,0 +1,14 @@
+---
+# tasks file for jupyter_fixup
+
+- name: fix traitlets version
+  pip:
+    name: traitlets
+    state: present
+    version: 5.1.1
+
+- name: fix jinja2 version
+  pip:
+    name: jinja2
+    state: present
+    version: 3.0.3

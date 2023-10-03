@@ -3,7 +3,8 @@
 #
 include ../common.mk
 
-OK : /boot/grub/grub.cfg /usr/local/bin/cg_mem_limit
+OK : /usr/local/bin/cg_mem_limit
+# /boot/grub/grub.cfg 
 
 /boot/grub/grub.cfg : /etc/default/grub.d/50-cloudimg-settings.cfg
 	update-grub

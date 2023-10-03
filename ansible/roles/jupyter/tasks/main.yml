@@ -1,0 +1,32 @@
+---
+# tasks file for jupyter
+
+- name: install pip3 npm libcurl4-openssl-dev libssl-dev
+  apt:
+    name:
+      - python3-pip
+      - npm
+      - libcurl4-openssl-dev
+      - libssl-dev
+    state: present
+  
+- name: install pip3 module tornado jupyter matplotlib notebook jupyterlab jupyterhub jupyterhub-idle-culler pixiedust
+  pip:
+    name:
+      - tornado
+      - jupyter
+      - matplotlib
+      - notebook
+      - jupyterlab
+      - jupyterhub
+      - pycurl
+      - jupyterhub-idle-culler
+      - pixiedust
+    state: present
+
+- name: install npm module configurable-http-proxy
+  npm:
+    name: configurable-http-proxy
+    state: present
+    global: yes
+

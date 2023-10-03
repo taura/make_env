@@ -1,0 +1,12 @@
+---
+# tasks file for pytorch_cpu
+
+- name: install pytorch for cpu
+  pip:
+    name:
+      - torch
+      - torchvision
+      - torchaudio
+    extra_args: --extra-index-url https://download.pytorch.org/whl/cpu
+    state: present
+

@@ -1,0 +1,34 @@
+---
+# tasks file for slurm_control
+
+- name: install slurm control server
+  apt:
+    name: slurm-wlm
+    state: present
+
+- name: copy slurm.conf
+  copy:
+    src: "{{ slurm_conf }}"
+    dest: /etc/slurm-llnl/slurm.conf
+
+- name: fetch munge.key
+  fetch:
+    src: /etc/munge/munge.key
+    dest: tmp
+
+- name: make /var/spool/slurmctld
+  file:
+    dest: /var/spool/slurmctld
+    owner: slurm
+    group: slurm
+    
+- name: restart slurmctld
+  service:
+    name: slurmctld
+    state: restarted
+    
+# - name: restart slurmd
+#   service:
+#     name: slurmd
+#     state: restarted
+    

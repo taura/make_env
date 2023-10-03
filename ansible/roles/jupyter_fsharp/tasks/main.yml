@@ -1,0 +1,22 @@
+---
+# tasks file for jupyter_fsharp
+
+# https://docs.servicestack.net/jupyter-notebooks-fsharp#setup-jupyter-for-f-locally
+- name: install fsharp
+  apt:
+    name: fsharp
+    state: present
+
+- name: install .NET SDK
+  snap:
+    name: dotnet-sdk
+    state: present
+    classic: yes
+
+- name: install dotnet-interactive
+  command:
+    cmd: dotnet tool install -g Microsoft.dotnet-interactive
+    
+- name: install dotnet jupyter
+  shell:
+    cmd: DOTNET_ROOT=/snap/dotnet-sdk/current dotnet interactive jupyter install

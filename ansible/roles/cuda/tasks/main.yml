@@ -1,0 +1,19 @@
+---
+# tasks file for cuda
+- name: cuda keyring
+  get_url:
+    url: https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/cuda-keyring_1.0-1_all.deb
+    dest: /tmp/cuda-keyring_1.0-1_all.deb
+    mode: '0644'
+
+- name: install cuda keyring
+  command: dpkg -i /tmp/cuda-keyring_1.0-1_all.deb
+
+- name: apt install cuda
+  apt:
+    update_cache: yes
+    name:
+      - cuda
+      - libcudnn8
+      - libcudnn8-dev
+

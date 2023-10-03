@@ -1,0 +1,40 @@
+---
+# tasks file for jupyter_sos
+
+- name: remove sosreport
+  apt:
+    name: sosreport
+    state: absent
+
+# nbgrader 0.8.2 has requirement jupyter-client<8, but you'll have jupyter-client 8.1.0 which is incompatible.
+# => jupyter-client==7.4.9
+# => sos-notebook==0.23.4
+
+- name: pip3 install module sos jupyter_contrib_core sos-notebook jupyterlab_sos
+  pip:
+    name:
+      - sos
+      - jupyter_contrib_core
+      - sos-notebook==0.23.4
+      - jupyterlab_sos
+    state: present
+
+# - name: install pip3 module jupyter_contrib_core
+#   pip:
+#     name: jupyter_contrib_core
+#     state: present
+
+# - name: install pip3 module sos-notebook
+#   pip:
+#     name: sos-notebook
+#     state: present
+
+# - name: install sos_notebook kernel
+#   command:
+#     cmd: python3 -m sos_notebook.install
+
+- name: install pip3 jupyterlab_sos
+  pip:
+    name: jupyterlab_sos
+    state: present
+

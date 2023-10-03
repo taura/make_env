@@ -94,7 +94,8 @@ all_nodes_running:=$(master_node_running) $(compute_nodes_running)
 all_nodes_ssh:=$(master_node_ssh) $(compute_nodes_ssh)
 all_nodes_configured:=$(master_node_configured) $(compute_nodes_configured)
 
-all               : configured
+# all               : configured
+all               : ssh
 master_running    : $(master_node_running)
 running           : $(all_nodes_running)
 master_ssh        : $(master_node_ssh)

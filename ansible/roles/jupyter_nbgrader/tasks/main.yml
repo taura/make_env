@@ -1,0 +1,48 @@
+---
+# tasks file for jupyter_nbgrader
+
+- name: install pip3 module nbgrader
+  pip:
+    name: nbgrader
+    state: present
+
+- name: install pip3 nbconvert
+  pip:
+    name: nbconvert
+#    name: nbconvert==5.6
+    state: present
+
+- name: make /home/share/nbgrader
+  file:
+    dest: /home/share/nbgrader
+    state: directory
+    owner: share
+    group: share
+    mode: 0777
+
+- name: make /home/share/nbgrader/exchange
+  file:
+    dest: /home/share/nbgrader/exchange
+    state: directory
+    owner: share
+    group: share
+    mode: 0777
+
+- name: make /usr/local/share/nbgrader
+  file:
+    src: /home/share/nbgrader
+    dest: /usr/local/share/nbgrader
+    state: link
+
+# - name: jupyter nbextention install nbgrader
+#   command:
+#     jupyter nbextension install --sys-prefix --py nbgrader --overwrite
+
+# - name: jupyter nbextention enable nbgrader
+#   command:
+#     cmd: jupyter nbextension enable --sys-prefix --py nbgrader
+    
+# - name: jupyter serverextension enable nbgrader
+#   command:
+#     cmd: jupyter serverextension enable --sys-prefix --py nbgrader
+    

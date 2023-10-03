@@ -1,0 +1,77 @@
+---
+# tasks file for cert
+
+- name: create cert directory
+  file:
+    state: directory
+    path: "/etc/pki/tls/certs/{{ fqdn }}"
+
+- name: create account private key
+  openssl_privatekey:
+    path: "/etc/pki/tls/certs/{{ fqdn }}/account.key"
+
+- name: create server key
+  openssl_privatekey:
+    path: "/etc/pki/tls/certs/{{ fqdn }}/{{ fqdn }}.key"
+
+- name: create csr
+  openssl_csr:
+    path: "/etc/pki/tls/certs/{{ fqdn }}/{{ fqdn }}.csr"
+    privatekey_path: "/etc/pki/tls/certs/{{ fqdn }}/{{ fqdn }}.key"
+    common_name: "{{ fqdn }}"
+
+- name: create a challenge for {{ fqdn }} using an account key file.
+  acme_certificate:
+    account_key_src: "/etc/pki/tls/certs/{{ fqdn }}/account.key"
+    account_email: "{{ account_email }}"
+    csr: "/etc/pki/tls/certs/{{ fqdn }}/{{ fqdn }}.csr"
+    dest: "/etc/pki/tls/certs/{{ fqdn }}/{{ fqdn }}.crt"
+    acme_directory: https://acme-v02.api.letsencrypt.org/directory
+    acme_version: 2
+    terms_agreed: true
+    remaining_days: 60
+  register: acme_challenge
+
+- name: create challenge path
+  file:
+    state: directory
+    path: "/var/www/html/{{ acme_challenge['challenge_data'][fqdn]['http-01']['resource'] | dirname }}"
+  when: acme_challenge is changed
+
+- name: create challenge data to server
+  copy:
+    dest: "/var/www/html/{{ acme_challenge['challenge_data'][fqdn]['http-01']['resource'] }}"
+    content: "{{ acme_challenge['challenge_data'][fqdn]['http-01']['resource_value'] }}"
+  when: acme_challenge is changed and fqdn in acme_challenge['challenge_data']
+
+- name: Let the challenge be validated and retrieve the cert and intermediate certificate
+  acme_certificate:
+    acme_directory: https://acme-v02.api.letsencrypt.org/directory
+    acme_version: 2
+    terms_agreed: true
+    account_key_src: "/etc/pki/tls/certs/{{ fqdn }}/account.key"
+    csr: "/etc/pki/tls/certs/{{ fqdn }}/{{ fqdn }}.csr"
+    dest: "/etc/pki/tls/certs/{{ fqdn }}/{{ fqdn }}.crt"
+    data: "{{ acme_challenge }}"
+  when: acme_challenge is changed
+
+- name: replace ssl.conf configure
+  replace:
+    path: /etc/apache2/sites-available/default-ssl.conf
+    regexp: '$(\s+){{ item.key }}(.*)$'
+    replace: '\1{{ item.key }} {{ item.file }}'
+  with_items:
+    - key: SSLCertificateFile
+      file: "/etc/pki/tls/certs/{{ fqdn }}/{{ fqdn }}.crt"
+    - key: SSLCertificateKeyFile
+      file: "/etc/pki/tls/certs/{{ fqdn }}/{{ fqdn }}.key"
+
+- name: enable apache ssl
+  command:
+    cmd: a2ensite default-ssl.conf
+
+- name: start apache2
+  service:
+    name: apache2
+    state: restarted
+

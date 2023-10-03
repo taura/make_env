@@ -1,0 +1,24 @@
+---
+# tasks file for nvidia_hpc_sdk
+
+# https://developer.nvidia.com/nvidia-hpc-sdk-downloads
+
+# not sure I need to do this
+# https://developer.nvidia.com/blog/updating-the-cuda-linux-gpg-repository-key/
+
+- name: install nvidia-hpcsdk-archive-keyring
+  shell:
+    cmd: curl https://developer.download.nvidia.com/hpc-sdk/ubuntu/DEB-GPG-KEY-NVIDIA-HPC-SDK | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-hpcsdk-archive-keyring.gpg
+
+- name: install nvhpc.list
+  shell:
+    cmd: echo 'deb [signed-by=/usr/share/keyrings/nvidia-hpcsdk-archive-keyring.gpg] https://developer.download.nvidia.com/hpc-sdk/ubuntu/amd64 /' | sudo tee /etc/apt/sources.list.d/nvhpc.list
+
+- name: apt update
+  apt:
+    update_cache: yes
+
+- name: install nvhpc-22-11
+  apt:
+    name: nvhpc-22-11
+    state: present

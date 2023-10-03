@@ -1,0 +1,32 @@
+---
+# tasks file for slurm_node
+- name: install slurm daemon
+  apt:
+    name:
+      - slurmd
+      - slurm-client
+    state: present
+
+- name: copy slurm.conf
+  copy:
+    src: "{{ slurm_conf }}"
+    dest: /etc/slurm-llnl/slurm.conf
+
+- name: install munge.key
+  copy: 
+    src: "tmp/{{ groups['slurm_control'][0] }}/etc/munge/munge.key"
+    dest: /etc/munge/munge.key
+    owner: munge
+    group: munge
+    mode: 0400
+    
+- name: munge restart
+  service:
+    name: munge
+    state: restarted
+
+- name: slurmd restart
+  service:
+    name: slurmd
+    state: restarted
+    

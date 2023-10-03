@@ -1,0 +1,68 @@
+---
+# tasks file for jupyter_julia
+
+# - name: install julia
+#   apt:
+#     name: julia
+#     state: present
+
+- name: install julia
+  become: true
+  become_user: "{{ jupyter_user }}"
+  get_url:
+    url: https://julialang-s3.julialang.org/bin/linux/x64/1.8/julia-1.8.5-linux-x86_64.tar.gz
+    dest: /home/{{ jupyter_user }}/julia-1.8.5-linux-x86_64.tar.gz
+    mode: '0644'
+
+# - name: install julia
+#   command:
+#     cmd: wget -O /opt/julia.tar.gz https://julialang-s3.julialang.org/bin/linux/x64/1.7/julia-1.7.3-linux-x86_64.tar.gz
+    
+# - name: unpack julia tarball
+#   command:
+#     cmd: tar -x --directory /opt -f /opt/julia.tar.gz
+
+- name: Extract juliar tar ball into /home/{{ jupyter_user }}
+  become: true
+  become_user: "{{ jupyter_user }}"
+  unarchive:
+    src: /home/{{ jupyter_user }}/julia-1.8.5-linux-x86_64.tar.gz
+    dest: /home/{{ jupyter_user }}
+    remote_src: yes
+
+- name: make symlink
+  file:
+    state: link
+    src: /home/{{ jupyter_user }}/julia-1.8.5
+    path: /home/{{ jupyter_user }}/julia
+    
+- name: make symlink
+  file:
+    state: link
+    src: /home/{{ jupyter_user }}/julia/bin/julia
+    path: /usr/local/bin/julia
+    
+#
+# couldn't figure out how to install julia globally
+# ~/.julia has both shared and private directories
+#
+    
+- name: make jupyter_julia_setup.sh
+  copy:
+    src: files/jupyter_julia_setup.sh
+    dest: /usr/local/bin/jupyter_julia_setup.sh
+    mode: 0755
+
+# below must be done by each user
+# they end up creating ~/.julia/*
+# some of them are common but some are written on each invocation
+#
+# - name: install IJulia
+#   become: true
+#   become_user: "{{ jupyter_user }}"
+#   command:
+#     cmd: julia -e 'import Pkg; Pkg.add("IJulia")'
+
+# - name: cp julia kernel directory
+#   command:
+#     cmd: cp -r ~{{ jupyter_user }}/.local/share/jupyter/kernels/julia-1.4 /usr/local/share/jupyter/kernels/
