@@ -44,6 +44,11 @@
   roles:
     - ldap_users
 
+- name: invalidate sss cache
+  hosts: default
+  roles:
+    - sss_invalidate
+
 - name: make ldap_sudo sudoers
   hosts: default
   roles:

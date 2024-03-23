@@ -10,6 +10,12 @@
 # => jupyter-client==7.4.9
 # => sos-notebook==0.23.4
 
+# Ubuntu 22.04
+# 
+# sudo pip3 install jupyterlab-sos -U
+# --> jupyterlab-sos 0.10.0 # OK
+
+
 - name: pip3 install module sos jupyter_contrib_core sos-notebook jupyterlab_sos
   pip:
     name:
@@ -19,22 +25,7 @@
       - jupyterlab_sos
     state: present
 
-# - name: install pip3 module jupyter_contrib_core
-#   pip:
-#     name: jupyter_contrib_core
-#     state: present
-
-# - name: install pip3 module sos-notebook
-#   pip:
-#     name: sos-notebook
-#     state: present
-
-# - name: install sos_notebook kernel
-#   command:
-#     cmd: python3 -m sos_notebook.install
-
-- name: install pip3 jupyterlab_sos
-  pip:
-    name: jupyterlab_sos
-    state: present
+- name: install sos_notebook kernel
+  command:
+    cmd: python3 -m sos_notebook.install
 

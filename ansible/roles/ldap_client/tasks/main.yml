@@ -76,6 +76,9 @@
   vars:
     ldap_server_addr: "{{ hostvars[groups['ldap_server'][0]].ethipv4 }}"
 
+- name: invalidate sss cache
+  command: sss_cache -E
+
 - name: restart sssd
   systemd:
     name: sssd
@@ -84,9 +87,15 @@
 #
 # copy ldaptool
 #
+- name: git checkout
+  git:
+    repo: 'https://github.com/mdx-jp/ldaptool.git'
+    dest: /opt/ldaptool
+
 - name: copy ldaptool
   copy:
-    src: ldaptool/bin
+    remote_src: true
+    src: /opt/ldaptool/bin
     dest: /usr/local/
     mode: preserve
 
