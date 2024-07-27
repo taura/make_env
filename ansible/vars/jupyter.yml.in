@@ -1,0 +1,4 @@
+#
+# variables for jupyter install
+#
+jupyter_user: share

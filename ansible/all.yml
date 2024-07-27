@@ -6,16 +6,6 @@
   roles:
     - basics
 
-# - name: attach home
-#   hosts: attach_home
-#   roles:
-#     - attach_home
-
-# - name: move mdxuser home
-#   hosts: default
-#   roles:
-#     - mv_home_mdxuser
-    
 - name: nfs server
   hosts: nfs_server
   roles:
@@ -76,10 +66,10 @@
 #   roles:
 #     - cuda
 
-- name: nvidia_hpc_sdk (install on all hosts to cross-compile)
-  hosts: default
-  roles:
-    - nvidia_hpc_sdk
+# - name: nvidia_hpc_sdk (install on all hosts to cross-compile)
+#   hosts: default
+#   roles:
+#     - nvidia_hpc_sdk
 
 # - name: pytorch_cpu
 #   hosts: cpu
@@ -99,7 +89,7 @@
     - jupyter_bash
     - jupyter_sos
     - jupyter_nbgrader
-    - jupyter_ocaml
+    # - jupyter_ocaml
     # - jupyter_vpython
     # - jupyter_c
     # - jupyter_julia

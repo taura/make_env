@@ -1,0 +1,4 @@
+#
+# Variables for slurm_control and slurm_node roles
+#
+slurm_conf: files/slurm.conf
