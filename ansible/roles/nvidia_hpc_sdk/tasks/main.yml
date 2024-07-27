@@ -18,7 +18,7 @@
   apt:
     update_cache: yes
 
-- name: install nvhpc-22-11
+- name: install nvhpc-24-5
   apt:
-    name: nvhpc-22-11
+    name: nvhpc-24-5
     state: present

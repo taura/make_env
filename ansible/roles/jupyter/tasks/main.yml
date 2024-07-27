@@ -13,17 +13,19 @@
 - name: install pip3 module tornado jupyter matplotlib notebook jupyterlab jupyterhub jupyterhub-idle-culler pixiedust
   pip:
     name:
-      - tornado
-      - jupyter
-      - matplotlib
-      - notebook
-      - jupyterlab
-      - jupyterhub
-      - pycurl
+      - jupyterhub==4.0.2
       - jupyterhub-idle-culler
-      - pixiedust
+      - pycurl
+      # - tornado
+      # - jupyter
+      # - matplotlib
+      # - notebook
+      # - jupyterlab
+      # - pixiedust
     state: present
 
+
+    
 - name: install npm module configurable-http-proxy
   npm:
     name: configurable-http-proxy

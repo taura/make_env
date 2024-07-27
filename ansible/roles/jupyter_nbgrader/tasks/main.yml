@@ -1,15 +1,12 @@
 ---
 # tasks file for jupyter_nbgrader
 
-- name: install pip3 module nbgrader
+- name: install pip3 module nbgrader nbconvert
   pip:
-    name: nbgrader
-    state: present
-
-- name: install pip3 nbconvert
-  pip:
-    name: nbconvert
-#    name: nbconvert==5.6
+    name:
+      - nbgrader
+      # - nbconvert
+      # - nbconvert==5.6
     state: present
 
 - name: make /home/share/nbgrader

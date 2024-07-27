@@ -76,10 +76,10 @@
 #   roles:
 #     - cuda
 
-# - name: nvidia_hpc_sdk (install on all hosts to cross-compile)
-#   hosts: default
-#   roles:
-#     - nvidia_hpc_sdk
+- name: nvidia_hpc_sdk (install on all hosts to cross-compile)
+  hosts: default
+  roles:
+    - nvidia_hpc_sdk
 
 # - name: pytorch_cpu
 #   hosts: cpu
@@ -99,9 +99,9 @@
     - jupyter_bash
     - jupyter_sos
     - jupyter_nbgrader
-    - jupyter_vpython
+    - jupyter_ocaml
+    # - jupyter_vpython
     # - jupyter_c
-    # - jupyter_ocaml
     # - jupyter_julia
     # - jupyter_rust
     # - jupyter_go

@@ -21,7 +21,8 @@
     name:
       - sos
       - jupyter_contrib_core
-      - sos-notebook==0.23.4
+      # - sos-notebook==0.23.4
+      - sos-notebook
       - jupyterlab_sos
     state: present
 
