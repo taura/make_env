@@ -97,6 +97,11 @@
     # - jupyter_go
     # - jupyter_fixup             # jinja2 version
 
+- name: Lustre
+  hosts: default
+  roles:
+    - lustre
+
 # - name: slurm
 #   hosts: slurm_control
 #   vars_files: [ "{{ slurm_vars_file }}" ]
