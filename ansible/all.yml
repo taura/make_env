@@ -6,6 +6,17 @@
   roles:
     - basics
 
+# conflict with lustre
+- name: cgroup2
+  hosts: none
+  roles:
+    - cgroup2
+
+- name: reboot
+  hosts: default
+  roles:
+    - reboot
+
 - name: nfs server
   hosts: nfs_server
   roles:
@@ -44,6 +55,11 @@
   roles:
     - ldap_sudo
     
+- name: lustre
+  hosts: default
+  roles:
+    - lustre
+
 - name: apache
   hosts: web_server
   vars_files: [ vars/cert.yml ]
@@ -51,10 +67,21 @@
     - apache
     - cert
 
-- name: cgroup2
+- name: jupyter
   hosts: default
+  vars_files: [ vars/jupyter.yml ]
   roles:
-    - cgroup2
+    - jupyter
+    - jupyter_bash
+    - jupyter_sos
+    - jupyter_nbgrader
+    # - jupyter_ocaml
+    # - jupyter_vpython
+    # - jupyter_c
+    # - jupyter_julia
+    # - jupyter_rust
+    # - jupyter_go
+    # - jupyter_fixup             # jinja2 version
 
 - name: remote desktop
   hosts: desktop
@@ -80,27 +107,6 @@
 #   hosts: gpu
 #   roles:
 #     - pytorch_gpu
-
-- name: jupyter
-  hosts: default
-  vars_files: [ vars/jupyter.yml ]
-  roles:
-    - jupyter
-    - jupyter_bash
-    - jupyter_sos
-    - jupyter_nbgrader
-    # - jupyter_ocaml
-    # - jupyter_vpython
-    # - jupyter_c
-    # - jupyter_julia
-    # - jupyter_rust
-    # - jupyter_go
-    # - jupyter_fixup             # jinja2 version
-
-- name: Lustre
-  hosts: default
-  roles:
-    - lustre
 
 # - name: slurm
 #   hosts: slurm_control

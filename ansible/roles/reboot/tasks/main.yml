@@ -1,0 +1,19 @@
+---
+
+- name: Get the current running kernel version
+  command: uname -r
+  register: running_kernel
+
+- name: Get the latest installed kernel version
+  shell: "dpkg --list | egrep -e 'linux-image-[0-9]' | awk '{print substr($2, 13)}' | sort -V | tail -n 1"
+  register: latest_installed_kernel
+
+- name: Check if the latest installed kernel is different from the running kernel
+  debug:
+    msg: "A new kernel is installed: {{ latest_installed_kernel.stdout }}. Current running kernel: {{ running_kernel.stdout }}"
+  when: latest_installed_kernel.stdout != running_kernel.stdout
+
+- name: Reboot the server if a new kernel is installed
+  reboot:
+  when: latest_installed_kernel.stdout != running_kernel.stdout
+

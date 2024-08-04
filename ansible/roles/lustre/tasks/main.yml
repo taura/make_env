@@ -1,0 +1,117 @@
+- name: check if the /large directory is a mount point
+  shell: mountpoint -q /large
+  register: mount_check
+  changed_when: false
+  ignore_errors: true
+
+- name: config lustre
+  block:
+    - name: get storage network interface name (ens1??)
+      shell: ip -br addr | grep {{ rdmaipv4 }} | awk '{print $1}'
+      register: cmd_res
+
+    - name: set tpc_netif, tcp_src_ipaddr, ib_src_ipaddr
+      set_fact:
+        ib_netif:       "{{ cmd_res.stdout }}"
+        tcp_netif:      "{{ cmd_res.stdout }}"
+        tcp_src_ipaddr: "{{ rdmaipv4 }}"
+        ib_src_ipaddr:  "{{ rdmaipv4 }}"
+
+    - name: generate lnet.conf.ddn
+      template:
+        src: templates/lnet.conf.ddn.j2
+        dest: /etc/lnet.conf.ddn
+
+    - name: add entry to /etc/fstab    
+      blockinfile:
+        path: /etc/fstab
+        block: |
+          # lustre
+          172.17.8.40@{{ lnet }}:172.17.8.41@{{ lnet }}:/fast  /fast  lustre network={{ lnet }},flock,noauto,defaults 0 0
+          172.17.8.56@{{ lnet }}:172.17.8.57@{{ lnet }}:/large /large lustre network={{ lnet }},flock,noauto,defaults 0 0
+
+    - name: lustre.conf
+      template:
+        src: templates/lustre.conf.j2
+        dest: /etc/modprobe.d/lustre.conf
+
+    - name: get lustre_client version
+      shell: dkms status | grep lustre-client-modules  | grep $(uname -r) | awk -F'[/,]' '{print $2}'
+      register: lustre_ver
+      # '
+  
+    - name: get ofed version
+      shell: dkms status | grep mlnx-ofed-kernel | grep $(uname -r) | awk -F'[/,]' '{print $2}'
+      register: ofed_ver
+      # '
+
+    - name: get linux kernel version
+      shell: uname -r
+      register: linux_ver
+
+    - name: update alternative
+      shell: update-alternatives --set ofa_kernel_headers /usr/src/ofa_kernel/x86_64/$(uname -r)
+
+    - name: update alternative
+      shell: update-alternatives --auto ofa_kernel_headers
+
+    - name: remove ofed dkms module
+      shell: dkms remove -m mlnx-ofed-kernel -v {{ ofed_ver.stdout }} -k {{ linux_ver.stdout }} || true
+
+    - name: install ofed dkms module
+      shell: dkms install -m mlnx-ofed-kernel -v {{ ofed_ver.stdout }} -k {{ linux_ver.stdout }}
+
+    - name: fix dkms.conf
+      replace:
+        path: /usr/src/lustre-client-modules-{{ lustre_ver.stdout }}/dkms.conf
+        regexp: configure --with-linux
+        replace: configure --with-o2ib=/usr/src/ofa_kernel/x86_64/$kernelver --with-linux
+
+    - name: remove lustre_client dkms module
+      shell: dkms remove -m lustre-client-modules -v {{ lustre_ver.stdout }} -k {{ linux_ver.stdout }} || true
+
+    - name: install lustre_client dkms module
+      shell: dkms install -m lustre-client-modules -v {{ lustre_ver.stdout }} -k {{ linux_ver.stdout }}
+
+    - name: stop lustre
+      systemd:
+        name: lustre_client
+        state: stopped
+    
+    - name: unload lustre module
+      modprobe:
+        name: lustre
+        state: absent
+    
+    - name: load lustre module
+      modprobe:
+        name: lustre
+        state: present
+    
+    - name: restart lustre
+      systemd:
+        name: lustre_client
+        enabled: true
+        state: restarted
+    
+    - name: mount lustre /large
+      mount:
+        fstype: lustre
+        src: 172.17.8.56@{{ lnet }}:172.17.8.57@{{ lnet }}:/large
+        path: /large
+        opts: network=o2ib10,flock,noauto,defaults
+        state: mounted
+
+    - name: mount lustre /fast
+      mount:
+        fstype: lustre
+        src: 172.17.8.40@{{ lnet }}:172.17.8.41@{{ lnet }}:/fast
+        path: /fast
+        opts: network=o2ib10,flock,noauto,defaults
+        state: mounted
+    - name: check if the /large directory is a mount point
+      shell: mountpoint -q /large
+      register: mount_check
+      changed_when: false
+  when: mount_check.rc != 0
+
