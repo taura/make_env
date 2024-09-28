@@ -8,7 +8,7 @@
 
 # conflict with lustre
 - name: cgroup2
-  hosts: none
+  hosts: default
   roles:
     - cgroup2
 
@@ -54,9 +54,10 @@
   hosts: default
   roles:
     - ldap_sudo
-    
+
+# conflict with cgroups    
 - name: lustre
-  hosts: default
+  hosts: none
   roles:
     - lustre
 
@@ -75,48 +76,47 @@
     - jupyter_bash
     - jupyter_sos
     - jupyter_nbgrader
-    # - jupyter_ocaml
-    # - jupyter_vpython
-    # - jupyter_c
-    # - jupyter_julia
-    # - jupyter_rust
-    # - jupyter_go
-    # - jupyter_fixup             # jinja2 version
 
 - name: remote desktop
-  hosts: desktop
+  hosts: none
   roles:
     - xrdp
 
-# - name: cuda (install on all hosts to cross-compile)
-#   hosts: default
-#   roles:
-#     - cuda
+- name: cuda (install on all hosts to cross-compile)
+#  hosts: default
+  hosts: none
+  roles:
+    - cuda
 
-# - name: nvidia_hpc_sdk (install on all hosts to cross-compile)
-#   hosts: default
-#   roles:
-#     - nvidia_hpc_sdk
+- name: nvidia_hpc_sdk (install on all hosts to cross-compile)
+#  hosts: default
+  hosts: none
+  roles:
+    - nvidia_hpc_sdk
 
-# - name: pytorch_cpu
-#   hosts: cpu
-#   roles:
-#     - pytorch_cpu
+- name: pytorch_cpu
+#  hosts: cpu
+  hosts: none
+  roles:
+    - pytorch_cpu
 
-# - name: pytorch_gpu
-#   hosts: gpu
-#   roles:
-#     - pytorch_gpu
+- name: pytorch_gpu
+#  hosts: gpu
+  hosts: none
+  roles:
+    - pytorch_gpu
 
-# - name: slurm
-#   hosts: slurm_control
-#   vars_files: [ "{{ slurm_vars_file }}" ]
-#   roles:
-#     - slurm_control
+- name: slurm
+#  hosts: slurm_control
+  hosts: none
+  vars_files: [ "{{ slurm_vars_file }}" ]
+  roles:
+    - slurm_control
 
-# - name: slurm
-#   hosts: slurm_node
-#   vars_files: [ "{{ slurm_vars_file }}" ]
-#   roles:
-#     - slurm_node
+- name: slurm
+#  hosts: slurm_node
+  hosts: none
+  vars_files: [ "{{ slurm_vars_file }}" ]
+  roles:
+    - slurm_node
 

@@ -10,22 +10,21 @@
       - libssl-dev
     state: present
   
-- name: install pip3 module tornado jupyter matplotlib notebook jupyterlab jupyterhub jupyterhub-idle-culler pixiedust
+- name: install pip3 jupyterhub jupyterhub-idle-culler
   pip:
     name:
       - jupyterhub==4.0.2
       - jupyterhub-idle-culler
       - pycurl
       - jupyterlab
-      # - tornado
-      # - jupyter
-      # - matplotlib
-      # - notebook
-      # - pixiedust
     state: present
 
+    # - tornado
+    # - jupyter
+    # - matplotlib
+    # - notebook
+    # - pixiedust
 
-    
 - name: install npm module configurable-http-proxy
   npm:
     name: configurable-http-proxy
