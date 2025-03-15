@@ -78,7 +78,7 @@
     - jupyter_nbgrader
 
 - name: remote desktop
-  hosts: none
+  hosts: desktop
   roles:
     - xrdp
 
@@ -89,7 +89,7 @@
     - cuda
 
 - name: nvidia_hpc_sdk (install on all hosts to cross-compile)
-#  hosts: default
+  hosts: default
   hosts: none
   roles:
     - nvidia_hpc_sdk

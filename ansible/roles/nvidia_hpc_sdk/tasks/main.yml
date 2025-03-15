@@ -8,7 +8,7 @@
 
 - name: install nvidia-hpcsdk-archive-keyring
   shell:
-    cmd: curl https://developer.download.nvidia.com/hpc-sdk/ubuntu/DEB-GPG-KEY-NVIDIA-HPC-SDK | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-hpcsdk-archive-keyring.gpg
+    cmd: curl https://developer.download.nvidia.com/hpc-sdk/ubuntu/DEB-GPG-KEY-NVIDIA-HPC-SDK | gpg --dearmor -o - > /usr/share/keyrings/nvidia-hpcsdk-archive-keyring.gpg
 
 - name: install nvhpc.list
   shell:
@@ -18,7 +18,7 @@
   apt:
     update_cache: yes
 
-- name: install nvhpc-24-5
+- name: install nvhpc-24-9
   apt:
-    name: nvhpc-24-5
+    name: nvhpc-24-9
     state: present
