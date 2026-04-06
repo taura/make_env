@@ -1,9 +1,9 @@
 ---
 # tasks file for nfs_client
 
-- name: move HOME of mdxuser to /home.local
+- name: move HOME of {{ ansible_user }} to /home.local
   include_role:
-      name: mv_home_mdxuser
+      name: mv_home_ansible_user
 
 - name: install nfs client
   apt:

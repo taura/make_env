@@ -66,5 +66,6 @@
 - name: remove ldap_users.csv
   file:
     dest: /tmp/ldap_users.csv
-    state: absent
+    #state: absent
+    state: present
 

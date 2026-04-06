@@ -8,12 +8,14 @@
 
 # conflict with lustre
 - name: cgroup2
-  hosts: default
+#  hosts: default
+  hosts: none
   roles:
     - cgroup2
 
 - name: reboot
-  hosts: default
+#  hosts: default
+  hosts: none
   roles:
     - reboot
 
@@ -21,37 +23,38 @@
   hosts: nfs_server
   roles:
     - nfs_server
+    - attach_home
 
 - name: nfs client
-  hosts: default
+  hosts: nfs_client
   roles:
     - nfs_client
 
 - name: ldap server
   hosts: ldap_server
-  vars_files: [ "{{ ldap_vars_file }}" ]
+  vars_files: [ vars/ldap.yml ]
   roles:
     - ldap_server
 
 - name: ldap client
-  hosts: default
-  vars_files: [ "{{ ldap_vars_file }}" ]
+  hosts: ldap_client
+  vars_files: [ vars/ldap.yml ]
   roles:
     - ldap_client
 
 - name: ldap users
   hosts: ldap_server
-  vars_files: [ "{{ ldap_vars_file }}" ]
+  vars_files: [ vars/ldap.yml ]
   roles:
     - ldap_users
 
 - name: invalidate sss cache
-  hosts: default
+  hosts: ldap_client
   roles:
     - sss_invalidate
 
 - name: make ldap_sudo sudoers
-  hosts: default
+  hosts: ldap_client
   roles:
     - ldap_sudo
 
@@ -68,8 +71,9 @@
     - apache
     - cert
 
+# done manually by share user using venv
 - name: jupyter
-  hosts: default
+  hosts: none
   vars_files: [ vars/jupyter.yml ]
   roles:
     - jupyter
@@ -78,7 +82,8 @@
     - jupyter_nbgrader
 
 - name: remote desktop
-  hosts: desktop
+#  hosts: desktop
+  hosts: none
   roles:
     - xrdp
 
@@ -89,7 +94,7 @@
     - cuda
 
 - name: nvidia_hpc_sdk (install on all hosts to cross-compile)
-  hosts: default
+#  hosts: default
   hosts: none
   roles:
     - nvidia_hpc_sdk
@@ -109,14 +114,14 @@
 - name: slurm
 #  hosts: slurm_control
   hosts: none
-  vars_files: [ "{{ slurm_vars_file }}" ]
+  vars_files: [ vars/slurm.yml ]
   roles:
     - slurm_control
 
 - name: slurm
 #  hosts: slurm_node
   hosts: none
-  vars_files: [ "{{ slurm_vars_file }}" ]
+  vars_files: [ vars/slurm.yml ]
   roles:
     - slurm_node
 

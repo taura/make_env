@@ -12,12 +12,16 @@ ff02::2 ip6-allrouters
 
 # Addresses on the Ethernet network
 {% for addr, v in hostvars.items() %}
+{% if v.ethipv4 is defined %}
 {{ v.ethipv4 }} {{ v.hostname }}
+{% endif %}
 {% endfor %}
 
 # Addresses on the RDMA network
 {% for addr, v in hostvars.items() %}
+{% if v.rdmaipv4 is defined %}
 {{ v.rdmaipv4 }}        {{ v.hostname }}-rdma
+{% endif %}
 {% endfor %}
 
 # global hostname

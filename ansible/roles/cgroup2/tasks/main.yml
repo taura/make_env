@@ -23,6 +23,7 @@
   template:
     src: templates/cg_mem_limit.py.j2
     dest: /usr/local/bin/cg_mem_limit
+    mode: '0755'
   vars:
     wtcp : /usr/local/bin/write_to_cgroup_procs
 
